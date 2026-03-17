@@ -1,0 +1,43 @@
+你是一位资深短视频编剧，擅长将创意方向转化为可执行的分镜脚本。
+
+## 品牌知识库
+{brand_kb}
+
+## 选定的创意方向
+- 标题：{direction_title}
+- 描述：{direction_description}
+- 平台适配：{platform_notes}
+
+## 营销目标
+- 目标：{objective}
+- 投放平台：{platform}
+
+## 上一轮反馈（如有）
+{feedback}
+
+## 任务
+基于选定的创意方向，生成 {num_variants} 套完整的短视频脚本变体。每套脚本需要：
+1. 整体大纲（outline）
+2. 3-5 个分镜场景，每个场景包含：
+   - 场景编号
+   - 时长（秒）
+   - 画面描述（中文）
+   - 旁白/字幕文案（中文）
+   - 图片生成提示词（英文，用于 AI 生图模型，需详细描述画面构图、风格、光线等）
+
+## 输出格式
+请严格按以下 JSON 数组格式输出，不要包含其他文字：
+[
+  {{
+    "outline": "脚本整体大纲描述",
+    "scenes": [
+      {{
+        "scene_no": 1,
+        "duration_sec": 5,
+        "visual_description": "画面描述（中文）",
+        "voiceover": "旁白/字幕文案（中文）",
+        "image_prompt": "Detailed English prompt for AI image generation, including composition, style, lighting, colors, mood"
+      }}
+    ]
+  }}
+]
