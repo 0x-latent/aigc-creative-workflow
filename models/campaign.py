@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from models.base import GenerationMeta
 
 
@@ -46,6 +46,7 @@ class Scene:
     visual_description: str
     voiceover: str
     image_prompt: str
+    page_type: str = ""  # "cover" / "body" / "summary" for graphic platforms
 
 
 @dataclass
@@ -53,6 +54,7 @@ class Script:
     id: str
     outline: str
     scenes: list[Scene]
+    visual_style: str = ""
 
 
 @dataclass
@@ -75,3 +77,26 @@ class GeneratedImage:
 class ImageResult:
     images: list[GeneratedImage]
     meta: GenerationMeta
+
+
+@dataclass
+class ScriptBranch:
+    script_index: int
+    confirmed_style: str = ""
+    images: list[GeneratedImage] | None = None
+
+
+@dataclass
+class DirectionBranch:
+    direction_index: int
+    scripts: list[Script] | None = None
+    selected_script_indices: list[int] | None = None
+    script_branches: list[ScriptBranch] | None = None
+
+
+@dataclass
+class ConceptBranch:
+    concept_index: int
+    directions: list[Direction] | None = None
+    selected_direction_indices: list[int] | None = None
+    direction_branches: list[DirectionBranch] | None = None

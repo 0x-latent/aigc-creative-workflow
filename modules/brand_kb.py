@@ -2,10 +2,24 @@ import hashlib
 import os
 from models.brand import BrandKB
 
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+
 
 class BrandKBReader:
     def __init__(self, brands_dir: str = "brands"):
         self.brands_dir = brands_dir
+
+    def discover_brand_images(self, brand_id: str) -> list[str]:
+        """Discover product images under brands/{brand_id}/image/. Returns empty list if none."""
+        image_dir = os.path.join(self.brands_dir, brand_id, "image")
+        if not os.path.isdir(image_dir):
+            return []
+        images = []
+        for fname in sorted(os.listdir(image_dir)):
+            ext = os.path.splitext(fname)[1].lower()
+            if ext in IMAGE_EXTENSIONS:
+                images.append(os.path.join(image_dir, fname))
+        return images
 
     def load(self, brand_id: str) -> BrandKB:
         file_path = os.path.join(self.brands_dir, brand_id, "knowledge_base.md")

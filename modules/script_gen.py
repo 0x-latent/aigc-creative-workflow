@@ -3,8 +3,7 @@ import json
 import os
 from datetime import datetime, timezone
 
-import anthropic
-
+from config import LLM_MODEL, logger
 from models.base import GenerationMeta
 from models.brand import BrandKB
 from models.campaign import (
@@ -14,17 +13,25 @@ from models.campaign import (
     Script,
     ScriptResult,
 )
+from modules.llm_util import call_llm, parse_json_array
 from modules.tracker import CampaignTracker
 
-PROMPT_TEMPLATE = "script_gen_v1.txt"
-MODEL = "claude-sonnet-4-20250514"
+PROMPT_TEMPLATE_VIDEO = "script_gen_v1.txt"
+PROMPT_TEMPLATE_GRAPHIC = "script_gen_v1_graphic.txt"
+
+# Platforms that use image-text (图文) format instead of video scripts
+GRAPHIC_PLATFORMS = {"小红书"}
 
 
 class ScriptGenerator:
     def __init__(self, prompts_dir: str = "prompts"):
         self.prompts_dir = prompts_dir
-        self.client = anthropic.Anthropic()
         self.tracker = CampaignTracker()
+
+    def _select_template(self, platform: str) -> str:
+        if platform in GRAPHIC_PLATFORMS:
+            return PROMPT_TEMPLATE_GRAPHIC
+        return PROMPT_TEMPLATE_VIDEO
 
     def generate(
         self,
@@ -33,8 +40,10 @@ class ScriptGenerator:
         direction: Direction,
         num_variants: int = 3,
         feedback: str = "",
+        platform_kb: str = "",
     ) -> ScriptResult:
-        template_path = os.path.join(self.prompts_dir, PROMPT_TEMPLATE)
+        prompt_template = self._select_template(goal.platform)
+        template_path = os.path.join(self.prompts_dir, prompt_template)
         with open(template_path, "r", encoding="utf-8") as f:
             template = f.read()
 
@@ -45,20 +54,15 @@ class ScriptGenerator:
             platform_notes=direction.platform_notes,
             objective=goal.objective,
             platform=goal.platform,
+            platform_kb=platform_kb or "无",
             num_variants=num_variants,
             feedback=feedback or "无",
         )
 
         input_hash = hashlib.md5(user_content.encode("utf-8")).hexdigest()
 
-        response = self.client.messages.create(
-            model=MODEL,
-            max_tokens=8192,
-            messages=[{"role": "user", "content": user_content}],
-        )
-
-        raw_text = response.content[0].text
-        scripts_data = self._parse_json(raw_text)
+        raw_text = call_llm(user_content, max_tokens=8192)
+        scripts_data = parse_json_array(raw_text)
 
         scripts = []
         for i, s in enumerate(scripts_data):
@@ -69,16 +73,22 @@ class ScriptGenerator:
                     visual_description=sc["visual_description"],
                     voiceover=sc["voiceover"],
                     image_prompt=sc["image_prompt"],
+                    page_type=sc.get("page_type", ""),
                 )
                 for sc in s["scenes"]
             ]
             scripts.append(
-                Script(id=f"script_{i+1}", outline=s["outline"], scenes=scenes)
+                Script(
+                    id=f"script_{i+1}",
+                    outline=s["outline"],
+                    scenes=scenes,
+                    visual_style=s.get("visual_style", ""),
+                )
             )
 
         meta = GenerationMeta(
-            prompt_template=PROMPT_TEMPLATE,
-            model=MODEL,
+            prompt_template=prompt_template,
+            model=LLM_MODEL,
             timestamp=datetime.now(timezone.utc).isoformat(),
             input_hash=input_hash,
         )
@@ -103,16 +113,9 @@ class ScriptGenerator:
                 "feedback": feedback,
             },
             output_snapshot={"scripts_count": len(scripts)},
-            prompt_template=PROMPT_TEMPLATE,
-            model=MODEL,
+            prompt_template=prompt_template,
+            model=LLM_MODEL,
             input_hash=input_hash,
         )
 
         return result
-
-    def _parse_json(self, text: str) -> list[dict]:
-        start = text.find("[")
-        end = text.rfind("]") + 1
-        if start != -1 and end > start:
-            return json.loads(text[start:end])
-        raise ValueError(f"Cannot parse JSON from response: {text[:200]}")

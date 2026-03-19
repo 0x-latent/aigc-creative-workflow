@@ -16,3 +16,10 @@ class InsightsBundle:
     raw_text: str
     sources: list[str]
     version: str
+
+
+@dataclass
+class PlatformKB:
+    platform: str
+    raw_md: str
+    file_path: str

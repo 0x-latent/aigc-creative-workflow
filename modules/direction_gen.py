@@ -1,23 +1,20 @@
 import hashlib
-import json
 import os
 from datetime import datetime, timezone
 
-import anthropic
-
+from config import LLM_MODEL, logger
 from models.base import GenerationMeta
 from models.brand import BrandKB
 from models.campaign import CampaignGoal, Concept, Direction, DirectionResult
+from modules.llm_util import call_llm, parse_json_array
 from modules.tracker import CampaignTracker
 
 PROMPT_TEMPLATE = "direction_gen_v1.txt"
-MODEL = "claude-sonnet-4-20250514"
 
 
 class DirectionGenerator:
     def __init__(self, prompts_dir: str = "prompts"):
         self.prompts_dir = prompts_dir
-        self.client = anthropic.Anthropic()
         self.tracker = CampaignTracker()
 
     def generate(
@@ -26,6 +23,7 @@ class DirectionGenerator:
         brand_kb: BrandKB,
         concept: Concept,
         feedback: str = "",
+        platform_kb: str = "",
     ) -> DirectionResult:
         template_path = os.path.join(self.prompts_dir, PROMPT_TEMPLATE)
         with open(template_path, "r", encoding="utf-8") as f:
@@ -38,19 +36,14 @@ class DirectionGenerator:
             concept_rationale=concept.rationale,
             objective=goal.objective,
             platform=goal.platform,
+            platform_kb=platform_kb or "无",
             feedback=feedback or "无",
         )
 
         input_hash = hashlib.md5(user_content.encode("utf-8")).hexdigest()
 
-        response = self.client.messages.create(
-            model=MODEL,
-            max_tokens=4096,
-            messages=[{"role": "user", "content": user_content}],
-        )
-
-        raw_text = response.content[0].text
-        directions_data = self._parse_json(raw_text)
+        raw_text = call_llm(user_content)
+        directions_data = parse_json_array(raw_text)
 
         directions = [
             Direction(
@@ -64,7 +57,7 @@ class DirectionGenerator:
 
         meta = GenerationMeta(
             prompt_template=PROMPT_TEMPLATE,
-            model=MODEL,
+            model=LLM_MODEL,
             timestamp=datetime.now(timezone.utc).isoformat(),
             input_hash=input_hash,
         )
@@ -81,15 +74,8 @@ class DirectionGenerator:
             },
             output_snapshot={"directions": directions_data},
             prompt_template=PROMPT_TEMPLATE,
-            model=MODEL,
+            model=LLM_MODEL,
             input_hash=input_hash,
         )
 
         return result
-
-    def _parse_json(self, text: str) -> list[dict]:
-        start = text.find("[")
-        end = text.rfind("]") + 1
-        if start != -1 and end > start:
-            return json.loads(text[start:end])
-        raise ValueError(f"Cannot parse JSON from response: {text[:200]}")

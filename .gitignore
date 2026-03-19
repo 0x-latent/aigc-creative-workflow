@@ -1,7 +1,35 @@
-.venv/
+# Python
 __pycache__/
-*.pyc
-*.pyo
-output/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
 .env
+.venv/
+venv/
+env/
+
+# Output
+output/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
 *.db
+
+# Raw brand assets (large binaries)
+raw_data/
+
+# Claude Code
+.claude/

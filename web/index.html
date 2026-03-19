@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIGC 创意营销工作流</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#fefce8', 100: '#fef9c3', 500: '#eab308', 600: '#ca8a04' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg) } }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1 } 50% { opacity: .4 } }
+    .spinner { animation: spin .8s linear infinite; border: 3px solid #e2e8f0; border-top-color: #6366f1; border-radius: 50%; width: 40px; height: 40px; }
+    .pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+    .card-hover { transition: all .2s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 25px -5px rgba(0,0,0,.1); }
+    .fade-in { animation: fadeIn .4s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: translateY(0) } }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .scene-img { object-fit: cover; }
+    .scene-img-video { aspect-ratio: 16/9; }
+    .scene-img-graphic { aspect-ratio: 3/4; }
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    /* Modal backdrop */
+    .modal-backdrop { background: rgba(0,0,0,.4); backdrop-filter: blur(2px); }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+<div id="app">
+
+  <!-- ==================== START SCREEN ==================== -->
+  <div v-if="!campaignId" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-100 to-indigo-50">
+    <div class="w-full max-w-lg fade-in">
+      <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-slate-900">AIGC 创意营销工作流</h1>
+        <p class="mt-2 text-slate-500">从品牌洞察到创意方案，AI 驱动的全流程创意生产</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-lg p-8">
+        <div class="space-y-5">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">品牌</label>
+            <select v-model="form.brand_id" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+              <option value="" disabled>选择品牌...</option>
+              <option v-for="b in brands" :key="b.id" :value="b.id">{{ b.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">营销目标</label>
+            <input v-model="form.objective" type="text" placeholder="如：提升品牌认知" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">目标平台</label>
+            <input v-model="form.platform" type="text" placeholder="如：抖音、小红书" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1.5">补充说明 <span class="text-slate-400">(可选)</span></label>
+            <textarea v-model="form.notes" rows="2" placeholder="目标人群、风格偏好等" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"></textarea>
+          </div>
+          <button @click="createCampaign" :disabled="!canCreate || loading"
+            class="w-full py-3 rounded-lg text-white font-medium text-sm transition"
+            :class="canCreate && !loading ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'">
+            {{ loading ? '正在初始化...' : '开始创作' }}
+          </button>
+          <p v-if="error" class="text-red-500 text-sm text-center">{{ error }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== WORKFLOW SCREEN ==================== -->
+  <div v-else class="h-screen flex flex-col">
+
+    <!-- Top Bar -->
+    <header class="h-14 bg-white border-b border-slate-200 flex items-center px-6 shrink-0">
+      <h1 class="text-base font-semibold text-slate-800">AIGC 创意工作流</h1>
+      <span class="ml-3 text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{{ campaignId }}</span>
+      <span class="ml-auto text-sm text-slate-500">{{ brandName }} · {{ form.platform }}</span>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+
+      <!-- Sidebar -->
+      <aside class="w-60 bg-slate-800 text-white p-5 shrink-0 overflow-y-auto">
+        <p class="text-xs text-slate-400 uppercase tracking-wider mb-4 font-medium">工作流步骤</p>
+        <div class="relative">
+          <div class="absolute left-[15px] top-5 bottom-5 w-0.5 bg-slate-600"></div>
+
+          <div v-for="(step, i) in steps" :key="i"
+            @click="goToStep(i)"
+            class="relative flex items-center gap-3 py-3 cursor-pointer group"
+            :class="{ 'opacity-40 cursor-default': !canViewStep(i) }">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 z-10 transition"
+              :class="stepCircleClass(i)">
+              <span v-if="isStepDone(i)" class="text-white">&#10003;</span>
+              <span v-else>{{ i + 1 }}</span>
+            </div>
+            <div>
+              <div class="text-sm font-medium" :class="activeStep === i ? 'text-white' : 'text-slate-300 group-hover:text-white'">{{ step.name }}</div>
+              <div v-if="step.sub && isStepDone(i)" class="text-xs text-slate-400 truncate max-w-[140px]">{{ stepSummary(i) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <button @click="resetAll" class="mt-8 w-full text-xs text-slate-400 hover:text-white border border-slate-600 hover:border-slate-400 rounded-lg py-2 transition">
+          + 新建 Campaign
+        </button>
+      </aside>
+
+      <!-- Content Area -->
+      <main class="flex-1 overflow-y-auto">
+
+        <!-- Loading Overlay -->
+        <div v-if="loading" class="flex flex-col items-center justify-center h-full fade-in">
+          <div class="spinner mb-4"></div>
+          <p class="text-slate-500 text-sm">{{ loadingMsg }}</p>
+        </div>
+
+        <!-- Error -->
+        <div v-else-if="error" class="flex flex-col items-center justify-center h-full">
+          <div class="bg-red-50 border border-red-200 rounded-xl p-6 max-w-md text-center">
+            <p class="text-red-600 text-sm mb-4">{{ error }}</p>
+            <button @click="error=null" class="text-sm text-indigo-600 hover:underline">返回</button>
+          </div>
+        </div>
+
+        <!-- Step Content -->
+        <div v-else class="p-8 max-w-5xl mx-auto fade-in">
+
+          <!-- ── Step 0: Brand Data ── -->
+          <template v-if="activeStep === 0">
+            <div class="mb-6">
+              <h2 class="text-xl font-bold">品牌数据已加载</h2>
+              <p class="text-slate-500 text-sm mt-1">知识库和用户洞察已就绪，点击下方开始生成创意理念</p>
+            </div>
+            <!-- 基本信息 -->
+            <div class="bg-white rounded-xl border border-slate-200 p-6 space-y-3 mb-4">
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-slate-600 w-24">品牌</span>
+                <span class="text-sm">{{ brandName }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-slate-600 w-24">营销目标</span>
+                <span class="text-sm">{{ form.objective }}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-medium text-slate-600 w-24">平台</span>
+                <span class="text-sm">{{ form.platform }}</span>
+                <span v-if="platformKbLoaded" class="text-xs bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full">平台知识已加载</span>
+                <span v-else class="text-xs bg-slate-100 text-slate-400 px-2 py-0.5 rounded-full">无平台专属知识</span>
+              </div>
+            </div>
+            <!-- 已加载的文档 -->
+            <div class="bg-white rounded-xl border border-slate-200 p-6 mb-4">
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">已加载文档</h3>
+              <div class="space-y-2">
+                <div class="flex items-center gap-2 text-sm">
+                  <span class="w-4 h-4 rounded bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs shrink-0">K</span>
+                  <span class="text-slate-600">knowledge_base.md</span>
+                  <span class="text-xs text-slate-400">品牌知识库</span>
+                </div>
+                <div v-for="src in insightsSources" :key="src" class="flex items-center gap-2 text-sm">
+                  <span class="w-4 h-4 rounded bg-amber-100 text-amber-600 flex items-center justify-center text-xs shrink-0">I</span>
+                  <span class="text-slate-600">{{ src }}</span>
+                  <span class="text-xs text-slate-400">用户洞察</span>
+                </div>
+                <div v-if="insightsSources.length === 0" class="text-sm text-slate-400 italic">暂无用户洞察文档</div>
+              </div>
+            </div>
+            <!-- 产品参考图 -->
+            <div v-if="brandImagePaths.length > 0" class="bg-white rounded-xl border border-slate-200 p-6 mb-4">
+              <h3 class="text-sm font-semibold text-slate-700 mb-3">产品参考图 <span class="text-xs text-slate-400 font-normal">（生图时将作为参考）</span></h3>
+              <div class="flex gap-3 flex-wrap">
+                <div v-for="(img, idx) in brandImagePaths" :key="idx" class="w-28 h-28 rounded-lg border border-slate-200 overflow-hidden bg-slate-50">
+                  <img :src="'/' + img" class="w-full h-full object-cover" :alt="'产品图 ' + (idx+1)">
+                </div>
+              </div>
+            </div>
+            <button @click="doGenerate('concepts')" class="mt-4 px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+              生成核心创意理念
+            </button>
+          </template>
+
+          <!-- ── Step 1: Concepts (multi-select) ── -->
+          <template v-if="activeStep === 1 && concepts.length">
+            <div class="mb-6">
+              <h2 class="text-xl font-bold">核心创意理念</h2>
+              <p class="text-slate-500 text-sm mt-1">{{ selectedConceptIndices.length > 0 ? `已选 ${selectedConceptIndices.length} 个理念` : '选择一个或多个理念（可多选），作为创意方案的核心出发点' }}</p>
+            </div>
+            <div class="grid grid-cols-1 gap-4">
+              <div v-for="(c, i) in concepts" :key="c.id"
+                @click="toggleConceptSelect(i)"
+                class="bg-white rounded-xl border-2 p-5 card-hover relative"
+                :class="multiCardClass(i, selectedConceptIndices, tempMultiSelect)">
+                <!-- Checkbox -->
+                <div class="absolute top-4 left-4">
+                  <div class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
+                    :class="isInSelection(i, selectedConceptIndices, tempMultiSelect) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'">
+                    <span v-if="isInSelection(i, selectedConceptIndices, tempMultiSelect)">&#10003;</span>
+                  </div>
+                </div>
+                <div class="pl-8">
+                  <div class="flex items-start justify-between">
+                    <h3 class="font-semibold text-base">{{ c.title }}</h3>
+                    <span class="text-xs text-slate-400 shrink-0 ml-2">{{ c.id }}</span>
+                  </div>
+                  <p class="text-sm text-slate-600 mt-2">{{ c.description }}</p>
+                  <p class="text-xs text-slate-400 mt-3 leading-relaxed"><span class="font-medium text-slate-500">推导依据：</span>{{ c.rationale }}</p>
+                </div>
+              </div>
+            </div>
+            <!-- Actions -->
+            <div v-if="selectedConceptIndices.length === 0" class="mt-6 flex items-center gap-4">
+              <button @click="confirmMultiSelect('concepts')" :disabled="tempMultiSelect.length === 0"
+                class="px-6 py-2.5 rounded-lg text-sm font-medium text-white transition"
+                :class="tempMultiSelect.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'">
+                确认选择 {{ tempMultiSelect.length }} 个理念
+              </button>
+              <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">
+                重新生成...
+              </button>
+            </div>
+            <div v-else class="mt-6">
+              <button @click="regenStep(1)" class="text-sm text-slate-500 hover:text-indigo-600 transition">
+                重新生成理念...
+              </button>
+            </div>
+            <div v-if="showFeedback && selectedConceptIndices.length === 0" class="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <textarea v-model="feedback" rows="2" placeholder="输入修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+              <button @click="doGenerate('concepts', feedback)" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">
+                重新生成
+              </button>
+            </div>
+          </template>
+
+          <!-- ── Step 2: Directions (tabbed by concept, multi-select) ── -->
+          <template v-if="activeStep === 2">
+            <div class="mb-6">
+              <h2 class="text-xl font-bold">创意执行方向</h2>
+              <p class="text-slate-500 text-sm mt-1">为每个理念选择执行方向（可多选）</p>
+            </div>
+            <!-- Concept tabs -->
+            <div class="flex border-b border-slate-200 mb-6 overflow-x-auto">
+              <button v-for="(ci, idx) in selectedConceptIndices" :key="ci"
+                @click="activeConceptTab = ci"
+                class="px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap"
+                :class="activeConceptTab === ci ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'">
+                {{ truncate(concepts[ci].title, 15) }}
+              </button>
+            </div>
+            <!-- Direction cards for active tab -->
+            <div v-if="currentBranch && currentBranch.directions" class="space-y-4">
+              <div v-for="(d, i) in currentBranch.directions" :key="d.id"
+                @click="toggleDirectionSelect(i)"
+                class="bg-white rounded-xl border-2 p-5 card-hover relative"
+                :class="multiCardClass(i, currentBranch.selectedDirectionIndices || [], tempDirSelect)">
+                <div class="absolute top-4 left-4">
+                  <div class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
+                    :class="isInSelection(i, currentBranch.selectedDirectionIndices || [], tempDirSelect) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'">
+                    <span v-if="isInSelection(i, currentBranch.selectedDirectionIndices || [], tempDirSelect)">&#10003;</span>
+                  </div>
+                </div>
+                <div class="pl-8">
+                  <h3 class="font-semibold text-base">{{ d.title }}</h3>
+                  <p class="text-sm text-slate-600 mt-2">{{ d.description }}</p>
+                  <p class="text-xs text-slate-400 mt-3"><span class="font-medium text-slate-500">平台适配：</span>{{ d.platform_notes }}</p>
+                </div>
+              </div>
+              <div v-if="!(currentBranch.selectedDirectionIndices && currentBranch.selectedDirectionIndices.length > 0)" class="mt-6 flex items-center gap-4">
+                <button @click="confirmDirectionSelect" :disabled="tempDirSelect.length === 0"
+                  class="px-6 py-2.5 rounded-lg text-sm font-medium text-white transition"
+                  :class="tempDirSelect.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'">
+                  确认选择 {{ tempDirSelect.length }} 个方向
+                </button>
+                <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成...</button>
+              </div>
+              <div v-else class="mt-6">
+                <button @click="regenDirections" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成方向...</button>
+              </div>
+              <div v-if="showFeedback && !(currentBranch.selectedDirectionIndices && currentBranch.selectedDirectionIndices.length > 0)" class="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <textarea v-model="feedback" rows="2" placeholder="输入修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                <button @click="genDirections(activeConceptTab, feedback)" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成</button>
+              </div>
+            </div>
+            <div v-else-if="!loading" class="text-center py-12">
+              <button @click="genDirections(activeConceptTab)" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                为"{{ truncate(concepts[activeConceptTab].title, 15) }}"生成方向
+              </button>
+            </div>
+          </template>
+
+          <!-- ── Step 3: Scripts / Graphic Notes (tabbed by concept > direction, multi-select) ── -->
+          <template v-if="activeStep === 3">
+            <div class="mb-6">
+              <h2 class="text-xl font-bold">{{ scriptStepName }}</h2>
+              <p class="text-slate-500 text-sm mt-1">{{ isGraphicPlatform ? '为每条路径选择图文方案' : '为每条路径选择脚本方案' }}</p>
+              <!-- Breadcrumb -->
+              <div class="flex items-center gap-1 text-xs text-slate-400 mt-2">
+                <span class="text-indigo-600 font-medium">{{ truncate(concepts[activeConceptTab]?.title, 12) }}</span>
+                <span>&gt;</span>
+                <span class="text-indigo-600 font-medium">{{ currentDirBranch ? truncate(currentBranch.directions[activeDirectionTab]?.title, 12) : '...' }}</span>
+              </div>
+            </div>
+            <!-- Concept tabs -->
+            <div class="flex border-b border-slate-200 mb-4 overflow-x-auto">
+              <button v-for="ci in selectedConceptIndices" :key="ci"
+                @click="switchConceptTab(ci)"
+                class="px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap"
+                :class="activeConceptTab === ci ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'">
+                {{ truncate(concepts[ci].title, 12) }}
+              </button>
+            </div>
+            <!-- Direction sub-tabs -->
+            <div v-if="currentBranch && currentBranch.selectedDirectionIndices" class="flex border-b border-slate-100 mb-6 overflow-x-auto">
+              <button v-for="di in currentBranch.selectedDirectionIndices" :key="di"
+                @click="activeDirectionTab = di"
+                class="px-3 py-1.5 text-xs font-medium border-b-2 transition whitespace-nowrap"
+                :class="activeDirectionTab === di ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'">
+                {{ truncate(currentBranch.directions[di].title, 15) }}
+              </button>
+            </div>
+            <!-- Script cards -->
+            <div v-if="currentDirBranch && currentDirBranch.scripts" class="space-y-4">
+              <div v-for="(sc, i) in currentDirBranch.scripts" :key="sc.id"
+                @click="toggleScriptSelect(i)"
+                class="bg-white rounded-xl border-2 p-5 card-hover relative"
+                :class="multiCardClass(i, currentDirBranch.selectedScriptIndices || [], tempScriptSelect)">
+                <div class="absolute top-4 left-4">
+                  <div class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
+                    :class="isInSelection(i, currentDirBranch.selectedScriptIndices || [], tempScriptSelect) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'">
+                    <span v-if="isInSelection(i, currentDirBranch.selectedScriptIndices || [], tempScriptSelect)">&#10003;</span>
+                  </div>
+                </div>
+                <div class="pl-8">
+                  <div class="flex items-start justify-between mb-2">
+                    <h3 class="font-semibold text-base">{{ isGraphicPlatform ? '图文方案' : '脚本方案' }} {{ i + 1 }}</h3>
+                    <span class="text-xs text-slate-400">{{ sc.scenes.length }} {{ isGraphicPlatform ? '页' : '个场景' }}<template v-if="!isGraphicPlatform"> · {{ sc.scenes.reduce((a, s) => a + s.duration_sec, 0) }}s</template></span>
+                  </div>
+                  <p class="text-sm text-slate-600 mb-1">{{ sc.outline }}</p>
+                  <p v-if="sc.visual_style" class="text-xs text-indigo-500 mb-2">推荐风格: {{ sc.visual_style }}</p>
+                  <div class="space-y-1.5">
+                    <div v-for="sn in sc.scenes" :key="sn.scene_no" class="flex text-xs text-slate-500 gap-2">
+                      <span class="shrink-0 text-slate-400" :class="isGraphicPlatform ? 'w-20' : 'w-16'">
+                        <template v-if="isGraphicPlatform">P{{ sn.scene_no }} <span class="text-indigo-400">{{ sn.page_type === 'cover' ? '封面' : sn.page_type === 'summary' ? '总结' : '正文' }}</span></template>
+                        <template v-else>场景{{ sn.scene_no }} ({{ sn.duration_sec }}s)</template>
+                      </span>
+                      <span class="truncate">{{ sn.visual_description }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div v-if="!(currentDirBranch.selectedScriptIndices && currentDirBranch.selectedScriptIndices.length > 0)" class="mt-6 flex items-center gap-4">
+                <button @click="confirmScriptSelect" :disabled="tempScriptSelect.length === 0"
+                  class="px-6 py-2.5 rounded-lg text-sm font-medium text-white transition"
+                  :class="tempScriptSelect.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'">
+                  确认选择 {{ tempScriptSelect.length }} 套{{ isGraphicPlatform ? '图文方案' : '脚本' }}
+                </button>
+                <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成...</button>
+              </div>
+              <div v-else class="mt-6">
+                <button @click="regenScripts" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成{{ isGraphicPlatform ? '图文方案' : '脚本' }}...</button>
+              </div>
+              <div v-if="showFeedback && !(currentDirBranch.selectedScriptIndices && currentDirBranch.selectedScriptIndices.length > 0)" class="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <textarea v-model="feedback" rows="2" placeholder="输入修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                <button @click="genScripts(activeConceptTab, activeDirectionTab, feedback)" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成</button>
+              </div>
+            </div>
+            <div v-else-if="!loading" class="text-center py-12">
+              <button @click="genScripts(activeConceptTab, activeDirectionTab)" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                生成{{ isGraphicPlatform ? '图文方案' : '脚本' }}
+              </button>
+            </div>
+          </template>
+
+          <!-- ── Step 4: Images (per script branch with breadcrumb) ── -->
+          <template v-if="activeStep === 4">
+            <div class="mb-6">
+              <h2 class="text-xl font-bold">AI 配图预览</h2>
+              <div class="flex items-center gap-1 text-xs text-slate-400 mt-2">
+                <span class="text-indigo-600 font-medium">{{ truncate(concepts[activeConceptTab]?.title, 12) }}</span>
+                <span>&gt;</span>
+                <span class="text-indigo-600 font-medium">{{ currentBranch?.directions?.[activeDirectionTab]?.title ? truncate(currentBranch.directions[activeDirectionTab].title, 12) : '...' }}</span>
+                <span>&gt;</span>
+                <span class="text-indigo-600 font-medium">{{ isGraphicPlatform ? '方案' : '脚本' }} {{ activeScriptTab + 1 }}</span>
+              </div>
+            </div>
+            <!-- Navigate between script branches -->
+            <div class="flex gap-2 mb-6 flex-wrap">
+              <template v-for="ci in selectedConceptIndices" :key="'img-c'+ci">
+                <template v-for="di in (branches[ci]?.selectedDirectionIndices || [])" :key="'img-d'+di">
+                  <template v-for="si in (branches[ci]?.directionBranches?.[di]?.selectedScriptIndices || [])" :key="'img-s'+si">
+                    <button @click="activeConceptTab=ci; activeDirectionTab=di; activeScriptTab=si"
+                      class="px-3 py-1.5 text-xs rounded-full border transition"
+                      :class="activeConceptTab===ci && activeDirectionTab===di && activeScriptTab===si ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-500 hover:border-indigo-400'">
+                      {{ truncate(concepts[ci].title, 6) }} &gt; {{ truncate(branches[ci]?.directions?.[di]?.title, 6) }} &gt; {{ isGraphicPlatform ? '方案' : '脚本' }}{{ si + 1 }}
+                    </button>
+                  </template>
+                </template>
+              </template>
+            </div>
+            <!-- Per-branch content: iterate all branches, show/hide by active tag -->
+            <template v-for="ci in selectedConceptIndices" :key="'sec-c'+ci">
+              <template v-for="di in (branches[ci]?.selectedDirectionIndices || [])" :key="'sec-d'+di">
+                <template v-for="si in (branches[ci]?.directionBranches?.[di]?.selectedScriptIndices || [])" :key="'sec-s'+si">
+                  <div v-show="activeConceptTab===ci && activeDirectionTab===di && activeScriptTab===si">
+                    <!-- Images grid -->
+                    <div v-if="branches[ci]?.directionBranches?.[di]?.scriptBranches?.[si]?.images"
+                      :class="isGraphicPlatform ? 'grid grid-cols-3 gap-3' : 'grid grid-cols-2 gap-4'">
+                      <div v-for="img in branches[ci].directionBranches[di].scriptBranches[si].images" :key="img.scene_no"
+                        class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                        <img :src="'/' + img.image_path" class="w-full scene-img" :class="isGraphicPlatform ? 'scene-img-graphic' : 'scene-img-video'" :alt="(isGraphicPlatform ? 'P' : 'Scene ') + img.scene_no">
+                        <div class="p-3">
+                          <span class="text-xs font-medium text-slate-500">{{ isGraphicPlatform ? 'P' + img.scene_no : '场景 ' + img.scene_no }}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Generating spinner -->
+                    <div v-else-if="branches[ci]?.directionBranches?.[di]?.scriptBranches?.[si]?.generating" class="text-center py-12 fade-in">
+                      <div class="spinner mx-auto mb-4"></div>
+                      <p class="text-slate-500 text-sm">正在生成配图...</p>
+                      <p class="text-slate-400 text-xs mt-1">可切换到其他方案继续确认风格</p>
+                    </div>
+                    <!-- Error -->
+                    <div v-else-if="branches[ci]?.directionBranches?.[di]?.scriptBranches?.[si]?.genError" class="text-center py-12">
+                      <p class="text-red-500 text-sm mb-3">{{ branches[ci].directionBranches[di].scriptBranches[si].genError }}</p>
+                      <button @click="branches[ci].directionBranches[di].scriptBranches[si].genError=null; activeConceptTab=ci; activeDirectionTab=di; activeScriptTab=si; openStyleModal()" class="text-sm text-indigo-600 hover:underline">重试</button>
+                    </div>
+                    <!-- Not started -->
+                    <div v-else class="text-center py-12">
+                      <p class="text-slate-500 text-sm mb-4">确认风格后生成配图</p>
+                      <button @click="activeConceptTab=ci; activeDirectionTab=di; activeScriptTab=si; openStyleModal()" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                        确认风格并生成配图
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </template>
+            </template>
+            <!-- Generation progress overview -->
+            <div class="mt-6 bg-white rounded-xl border border-slate-200 p-4">
+              <h4 class="text-sm font-medium text-slate-700 mb-3">配图生成进度</h4>
+              <div class="space-y-2">
+                <template v-for="ci in selectedConceptIndices" :key="'prog-c'+ci">
+                  <template v-for="di in (branches[ci]?.selectedDirectionIndices || [])" :key="'prog-d'+di">
+                    <template v-for="si in (branches[ci]?.directionBranches?.[di]?.selectedScriptIndices || [])" :key="'prog-s'+si">
+                      <div class="flex items-center gap-2 text-xs">
+                        <span v-if="branches[ci]?.directionBranches?.[di]?.scriptBranches?.[si]?.images"
+                          class="w-4 h-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">&#10003;</span>
+                        <span v-else-if="branches[ci]?.directionBranches?.[di]?.scriptBranches?.[si]?.generating"
+                          class="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></span>
+                        <span v-else class="w-4 h-4 rounded-full bg-slate-200"></span>
+                        <span class="text-slate-600">{{ truncate(concepts[ci]?.title, 8) }} &gt; {{ truncate(branches[ci]?.directions?.[di]?.title, 8) }} &gt; {{ isGraphicPlatform ? '方案' : '脚本' }}{{ si+1 }}</span>
+                        <span v-if="branches[ci]?.directionBranches?.[di]?.scriptBranches?.[si]?.confirmed_style" class="text-slate-400">{{ branches[ci].directionBranches[di].scriptBranches[si].confirmed_style }}</span>
+                      </div>
+                    </template>
+                  </template>
+                </template>
+              </div>
+            </div>
+            <!-- Done: go to summary -->
+            <div v-if="allImagesGenerated" class="mt-6 text-center">
+              <button @click="goToStep(5)" class="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition">
+                查看方案总览
+              </button>
+            </div>
+          </template>
+
+          <!-- ── Step 5: Summary / All Creative Plans ── -->
+          <template v-if="activeStep === 5">
+            <div class="mb-8 text-center">
+              <h2 class="text-2xl font-bold">创意方案总览</h2>
+              <p class="text-slate-500 text-sm mt-1">{{ brandName }} · {{ form.platform }} · {{ form.objective }}</p>
+              <p v-if="summaryPlans.length" class="mt-2 text-sm text-indigo-600 font-medium">共生成 {{ summaryPlans.length }} 套创意方案</p>
+            </div>
+
+            <div v-if="summaryLoading" class="flex justify-center py-12">
+              <div class="spinner"></div>
+            </div>
+
+            <div v-else class="space-y-6">
+              <div v-for="(plan, pi) in summaryPlans" :key="pi"
+                class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                <!-- Collapsible header -->
+                <div @click="plan._expanded = !plan._expanded" class="p-5 cursor-pointer hover:bg-slate-50 transition flex items-center justify-between">
+                  <div>
+                    <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium mr-2">方案 {{ pi + 1 }}</span>
+                    <span class="font-semibold text-sm">{{ plan.concept.title }} &gt; {{ plan.direction.title }}</span>
+                  </div>
+                  <span class="text-slate-400 text-sm">{{ plan._expanded ? '收起' : '展开' }}</span>
+                </div>
+                <!-- Expanded content -->
+                <div v-if="plan._expanded" class="border-t border-slate-100 p-5 space-y-5 fade-in">
+                  <!-- Concept -->
+                  <div>
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">1</span>
+                      <h4 class="text-xs font-semibold text-indigo-600 uppercase">核心理念</h4>
+                    </div>
+                    <h5 class="font-semibold">{{ plan.concept.title }}</h5>
+                    <p class="text-sm text-slate-600 mt-1">{{ plan.concept.description }}</p>
+                  </div>
+                  <!-- Direction -->
+                  <div>
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">2</span>
+                      <h4 class="text-xs font-semibold text-indigo-600 uppercase">创意方向</h4>
+                    </div>
+                    <h5 class="font-semibold">{{ plan.direction.title }}</h5>
+                    <p class="text-sm text-slate-600 mt-1">{{ plan.direction.description }}</p>
+                  </div>
+                  <!-- Script / Graphic + Images timeline -->
+                  <div>
+                    <div class="flex items-center gap-2 mb-2">
+                      <span class="w-5 h-5 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">3</span>
+                      <h4 class="text-xs font-semibold text-indigo-600 uppercase">{{ scriptStepName }}</h4>
+                      <span v-if="plan.visual_style" class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">{{ plan.visual_style }}</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-4">{{ plan.script.outline }}</p>
+
+                    <!-- Video: vertical timeline -->
+                    <div v-if="!isGraphicPlatform" class="relative pl-8">
+                      <div class="absolute left-[11px] top-2 bottom-2 w-0.5 bg-indigo-200"></div>
+                      <div v-for="(scene, sidx) in plan.script.scenes" :key="scene.scene_no" class="relative mb-6 last:mb-0">
+                        <div class="absolute -left-8 top-0 w-6 h-6 rounded-full bg-indigo-100 border-2 border-indigo-500 flex items-center justify-center">
+                          <span class="text-xs font-bold text-indigo-600">{{ scene.scene_no }}</span>
+                        </div>
+                        <div class="bg-slate-50 rounded-xl overflow-hidden border border-slate-100">
+                          <img v-if="plan.images[sidx]" :src="'/' + plan.images[sidx].image_path" class="w-full scene-img scene-img-video">
+                          <div class="p-4">
+                            <div class="flex items-center gap-2 mb-1">
+                              <span class="text-xs font-medium text-indigo-600">场景 {{ scene.scene_no }}</span>
+                              <span class="text-xs text-slate-400">{{ scene.duration_sec }}s</span>
+                            </div>
+                            <p class="text-sm text-slate-700">{{ scene.visual_description }}</p>
+                            <div class="bg-white rounded-lg p-2 mt-2">
+                              <p class="text-xs text-slate-400 mb-0.5">旁白</p>
+                              <p class="text-sm text-slate-600 italic">"{{ scene.voiceover }}"</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Graphic (小红书): card grid -->
+                    <div v-else class="grid grid-cols-3 gap-3">
+                      <div v-for="(scene, sidx) in plan.script.scenes" :key="scene.scene_no" class="bg-slate-50 rounded-xl overflow-hidden border border-slate-100">
+                        <img v-if="plan.images[sidx]" :src="'/' + plan.images[sidx].image_path" class="w-full scene-img scene-img-graphic">
+                        <div class="p-3">
+                          <div class="flex items-center gap-1 mb-1">
+                            <span class="text-xs font-medium text-indigo-600">P{{ scene.scene_no }}</span>
+                            <span class="text-xs text-slate-400">{{ scene.page_type === 'cover' ? '封面' : scene.page_type === 'summary' ? '总结' : '正文' }}</span>
+                          </div>
+                          <p class="text-xs text-slate-700 line-clamp-2">{{ scene.visual_description }}</p>
+                          <p class="text-xs text-slate-500 mt-1 line-clamp-2 italic">{{ scene.voiceover }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-10 pt-6 border-t border-slate-200 text-center">
+              <p class="text-sm text-slate-400 mb-3">点击左侧步骤可回溯调整任一环节</p>
+              <button @click="resetAll" class="text-sm text-indigo-600 hover:underline">开始新的 Campaign</button>
+            </div>
+          </template>
+
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== CONFIRM GENERATION MODAL ==================== -->
+  <div v-if="showConfirmModal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop" @click.self="showConfirmModal = false">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md fade-in">
+      <h3 class="text-lg font-bold mb-3">确认生成任务</h3>
+      <p class="text-sm text-slate-600 mb-4">{{ confirmModalMsg }}</p>
+      <div class="bg-slate-50 rounded-lg p-4 mb-5 space-y-2">
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-500">生成任务数</span>
+          <span class="font-medium">{{ confirmTaskCount }}</span>
+        </div>
+        <div class="flex justify-between text-sm">
+          <span class="text-slate-500">预估等待时间</span>
+          <span class="font-medium">约 {{ Math.max(1, Math.ceil(confirmTaskCount * 0.5)) }}-{{ Math.max(2, confirmTaskCount) }} 分钟</span>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button @click="showConfirmModal = false" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition">取消</button>
+        <button @click="executeConfirmedAction" class="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">确认生成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== STYLE CONFIRMATION MODAL ==================== -->
+  <div v-if="showStyleModal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop" @click.self="showStyleModal = false">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md fade-in">
+      <h3 class="text-lg font-bold mb-2">确认视觉风格</h3>
+      <p class="text-sm text-slate-500 mb-4">确认后将统一应用于该脚本的所有配图</p>
+      <!-- Recommended -->
+      <div v-if="styleRecommended" class="mb-3">
+        <p class="text-xs text-slate-400 mb-1">LLM 推荐风格</p>
+        <p class="text-sm font-medium text-indigo-600">{{ styleRecommended }}</p>
+      </div>
+      <!-- Preset tags -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button v-for="tag in styleTags" :key="tag" @click="styleInput = tag"
+          class="px-3 py-1.5 text-xs rounded-full border transition"
+          :class="styleInput === tag ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-400'">
+          {{ tag }}
+        </button>
+      </div>
+      <!-- Custom input -->
+      <input v-model="styleInput" type="text" placeholder="或输入自定义风格..."
+        class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none mb-4">
+      <div class="flex justify-end gap-3">
+        <button @click="showStyleModal = false" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800 transition">取消</button>
+        <button @click="confirmStyleAndGenImages" :disabled="!styleInput"
+          class="px-5 py-2 rounded-lg text-sm font-medium text-white transition"
+          :class="styleInput ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'">
+          确认风格并生成配图
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const { createApp } = Vue
+
+createApp({
+  data() {
+    return {
+      brands: [],
+      form: { brand_id: '', objective: '', platform: '', notes: '' },
+
+      campaignId: null,
+      brandName: '',
+      insightsSources: [],
+      platformKbLoaded: false,
+      brandImagePaths: [],
+
+      // Tree state
+      concepts: [],
+      selectedConceptIndices: [],
+      branches: {},  // keyed by concept index
+
+      activeStep: 0,
+      activeConceptTab: null,
+      activeDirectionTab: null,
+      activeScriptTab: null,
+
+      // Temp selections
+      tempMultiSelect: [],   // for concepts
+      tempDirSelects: {},    // keyed by concept index: { ci: [di, ...] }
+      tempScriptSelects: {}, // keyed by "ci_di": [si, ...]
+
+      showFeedback: false,
+      feedback: '',
+
+      loading: false,
+      loadingMsg: '',
+      error: null,
+
+      // Confirm modal
+      showConfirmModal: false,
+      confirmModalMsg: '',
+      confirmTaskCount: 0,
+      confirmedAction: null,
+
+      // Style modal
+      showStyleModal: false,
+      styleRecommended: '',
+      styleInput: '',
+      styleTags: ['写实摄影风', '3D渲染风', '扁平插画风', '水墨中国风', '电影感'],
+
+      // Summary
+      summaryPlans: [],
+      summaryLoading: false,
+
+      // steps is computed (platform-aware)
+    }
+  },
+
+  computed: {
+    canCreate() {
+      return this.form.brand_id && this.form.objective && this.form.platform
+    },
+    isGraphicPlatform() {
+      return ['小红书'].includes(this.form.platform)
+    },
+    scriptStepName() {
+      return this.isGraphicPlatform ? '图文方案' : '分镜脚本'
+    },
+    steps() {
+      return [
+        { name: '品牌数据', sub: true },
+        { name: '核心理念', sub: true },
+        { name: '创意方向', sub: true },
+        { name: this.scriptStepName, sub: true },
+        { name: 'AI 配图', sub: true },
+        { name: '方案总览', sub: false },
+      ]
+    },
+    currentBranch() {
+      if (this.activeConceptTab === null) return null
+      return this.branches[this.activeConceptTab] || null
+    },
+    currentDirBranch() {
+      if (!this.currentBranch || this.activeDirectionTab === null) return null
+      const dbs = this.currentBranch.directionBranches || {}
+      return dbs[this.activeDirectionTab] || null
+    },
+    currentScriptBranch() {
+      if (!this.currentDirBranch || this.activeScriptTab === null) return null
+      const sbs = this.currentDirBranch.scriptBranches || {}
+      return sbs[this.activeScriptTab] || null
+    },
+    tempDirSelect() {
+      if (this.activeConceptTab === null) return []
+      return this.tempDirSelects[this.activeConceptTab] || []
+    },
+    tempScriptSelect() {
+      if (this.activeConceptTab === null || this.activeDirectionTab === null) return []
+      const key = `${this.activeConceptTab}_${this.activeDirectionTab}`
+      return this.tempScriptSelects[key] || []
+    },
+    allImagesGenerated() {
+      if (!this.isStepDone(3)) return false
+      for (const ci of this.selectedConceptIndices) {
+        const cb = this.branches[ci]
+        if (!cb) return false
+        for (const di of (cb.selectedDirectionIndices || [])) {
+          const db = cb.directionBranches?.[di]
+          if (!db) return false
+          for (const si of (db.selectedScriptIndices || [])) {
+            const sb = db.scriptBranches?.[si]
+            if (!sb || !sb.images) return false
+          }
+        }
+      }
+      return true
+    },
+    furthestStep() {
+      if (this.concepts.length === 0) return 0
+      if (this.selectedConceptIndices.length === 0) return 1
+      // Concepts selected → can view directions (step 2)
+      if (!this.isStepDone(2)) return 2
+      // All directions selected → can view scripts (step 3)
+      if (!this.isStepDone(3)) return 3
+      // All scripts selected → can view images (step 4)
+      if (!this.isStepDone(4)) return 4
+      // All images generated → can view summary
+      return 5
+    },
+  },
+
+  methods: {
+    // ── API helpers ──
+    async api(method, url, body = null) {
+      const opts = { method, headers: { 'Content-Type': 'application/json' } }
+      if (body) opts.body = JSON.stringify(body)
+      const res = await fetch(url, opts)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.detail || `API error ${res.status}`)
+      }
+      return res.json()
+    },
+
+    truncate(s, n) {
+      if (!s) return ''
+      return s.length > n ? s.slice(0, n) + '...' : s
+    },
+
+    // ── Step state helpers ──
+    isStepDone(i) {
+      if (i === 0) return this.concepts.length > 0
+      if (i === 1) return this.selectedConceptIndices.length > 0
+      if (i === 2) {
+        if (this.selectedConceptIndices.length === 0) return false
+        for (const ci of this.selectedConceptIndices) {
+          const cb = this.branches[ci]
+          if (!cb || !cb.selectedDirectionIndices || cb.selectedDirectionIndices.length === 0) return false
+        }
+        return true
+      }
+      if (i === 3) {
+        if (!this.isStepDone(2)) return false
+        for (const ci of this.selectedConceptIndices) {
+          const cb = this.branches[ci]
+          if (!cb || !cb.selectedDirectionIndices) return false
+          for (const di of cb.selectedDirectionIndices) {
+            const db = cb.directionBranches?.[di]
+            if (!db || !db.selectedScriptIndices || db.selectedScriptIndices.length === 0) return false
+          }
+        }
+        return true
+      }
+      if (i === 4) return this.allImagesGenerated
+      return false
+    },
+
+    canViewStep(i) {
+      return i <= this.furthestStep
+    },
+
+    stepCircleClass(i) {
+      if (this.isStepDone(i)) return 'bg-emerald-500 text-white'
+      if (i === this.activeStep) return 'bg-indigo-500 text-white pulse-dot'
+      if (this.canViewStep(i)) return 'bg-slate-600 text-slate-300'
+      return 'bg-slate-700 text-slate-500'
+    },
+
+    stepSummary(i) {
+      if (i === 0) return this.brandName
+      if (i === 1) return `${this.selectedConceptIndices.length} 个理念`
+      if (i === 2) return '方向已选'
+      if (i === 3) return '脚本已选'
+      if (i === 4) return '配图已生成'
+      return ''
+    },
+
+    goToStep(i) {
+      if (this.canViewStep(i) && !this.loading) {
+        this.activeStep = i
+        this.showFeedback = false
+        this.feedback = ''
+        this.error = null
+        if (i === 5) this.loadSummary()
+      }
+    },
+
+    // ── Multi-select helpers ──
+    isInSelection(i, confirmed, temp) {
+      if (confirmed && confirmed.length > 0) return confirmed.includes(i)
+      return temp.includes(i)
+    },
+
+    multiCardClass(i, confirmed, temp) {
+      if (confirmed && confirmed.length > 0) {
+        if (confirmed.includes(i)) return 'border-indigo-500 bg-indigo-50 ring-1 ring-indigo-500'
+        return 'border-slate-200 opacity-60'
+      }
+      if (temp.includes(i)) return 'border-indigo-400 bg-indigo-50/50 cursor-pointer'
+      return 'border-slate-200 hover:border-indigo-300 cursor-pointer'
+    },
+
+    toggleConceptSelect(i) {
+      if (this.selectedConceptIndices.length > 0) return
+      const idx = this.tempMultiSelect.indexOf(i)
+      if (idx >= 0) this.tempMultiSelect.splice(idx, 1)
+      else this.tempMultiSelect.push(i)
+    },
+
+    toggleDirectionSelect(i) {
+      if (this.currentBranch?.selectedDirectionIndices?.length > 0) return
+      const ci = this.activeConceptTab
+      if (!this.tempDirSelects[ci]) this.tempDirSelects[ci] = []
+      const arr = this.tempDirSelects[ci]
+      const idx = arr.indexOf(i)
+      if (idx >= 0) arr.splice(idx, 1)
+      else arr.push(i)
+      // Trigger reactivity
+      this.tempDirSelects = { ...this.tempDirSelects }
+    },
+
+    toggleScriptSelect(i) {
+      if (this.currentDirBranch?.selectedScriptIndices?.length > 0) return
+      const key = `${this.activeConceptTab}_${this.activeDirectionTab}`
+      if (!this.tempScriptSelects[key]) this.tempScriptSelects[key] = []
+      const arr = this.tempScriptSelects[key]
+      const idx = arr.indexOf(i)
+      if (idx >= 0) arr.splice(idx, 1)
+      else arr.push(i)
+      // Trigger reactivity
+      this.tempScriptSelects = { ...this.tempScriptSelects }
+    },
+
+    // ── Campaign creation ──
+    async createCampaign() {
+      this.loading = true
+      this.loadingMsg = '正在加载品牌数据...'
+      this.error = null
+      try {
+        const data = await this.api('POST', '/api/campaigns', this.form)
+        this.campaignId = data.campaign_id
+        this.brandName = data.brand_name
+        this.insightsSources = data.insights_sources || []
+        this.platformKbLoaded = data.platform_kb_loaded || false
+        this.brandImagePaths = data.brand_images || []
+        this.activeStep = 0
+      } catch (e) {
+        this.error = e.message
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // ── Concepts generation ──
+    async doGenerate(type, feedback = '') {
+      if (type === 'concepts') {
+        this.loading = true
+        this.loadingMsg = '正在生成核心创意理念...'
+        this.error = null
+        this.showFeedback = false
+        this.feedback = ''
+        this.tempMultiSelect = []
+        try {
+          const data = await this.api('POST', `/api/campaigns/${this.campaignId}/concepts`, { feedback })
+          this.concepts = data.concepts
+          this.selectedConceptIndices = []
+          this.branches = {}
+          this.activeStep = 1
+        } catch (e) {
+          this.error = e.message
+        } finally {
+          this.loading = false
+        }
+      }
+    },
+
+    // ── Concept multi-select confirm ──
+    async confirmMultiSelect(type) {
+      if (type !== 'concepts' || this.tempMultiSelect.length === 0) return
+
+      const count = this.tempMultiSelect.length
+      this.confirmModalMsg = `您选择了 ${count} 个理念，将为每个理念分别生成 3-5 个创意方向。`
+      this.confirmTaskCount = count
+      this.confirmedAction = async () => {
+        try {
+          const data = await this.api('POST', `/api/campaigns/${this.campaignId}/concepts/select`, { indices: this.tempMultiSelect })
+          this.selectedConceptIndices = [...this.tempMultiSelect]
+          this.tempMultiSelect = []
+          // Init branches
+          for (const ci of this.selectedConceptIndices) {
+            this.branches[ci] = { directions: null, selectedDirectionIndices: null, directionBranches: {} }
+          }
+          this.activeConceptTab = this.selectedConceptIndices[0]
+          // Auto-generate directions for all concept branches
+          await this.genAllDirections()
+        } catch (e) {
+          this.error = e.message
+        }
+      }
+      this.showConfirmModal = true
+    },
+
+    async executeConfirmedAction() {
+      this.showConfirmModal = false
+      if (this.confirmedAction) await this.confirmedAction()
+      this.confirmedAction = null
+    },
+
+    // ── Direction generation ──
+    async genDirections(ci, feedback = '') {
+      this.loading = true
+      this.loadingMsg = `正在为"${this.truncate(this.concepts[ci].title, 10)}"生成方向...`
+      this.error = null
+      this.showFeedback = false
+      this.feedback = ''
+      delete this.tempDirSelects[ci]
+      this.tempDirSelects = { ...this.tempDirSelects }
+      try {
+        const data = await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/directions`, { feedback })
+        if (!this.branches[ci]) this.branches[ci] = {}
+        this.branches[ci].directions = data.directions
+        this.branches[ci].selectedDirectionIndices = null
+        this.branches[ci].directionBranches = {}
+        this.activeStep = 2
+        this.activeConceptTab = ci
+      } catch (e) {
+        this.error = e.message
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async genAllDirections() {
+      this.loading = true
+      this.loadingMsg = '正在为所有理念生成方向...'
+      this.error = null
+      try {
+        const promises = this.selectedConceptIndices.map(async ci => {
+          const data = await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/directions`)
+          if (!this.branches[ci]) this.branches[ci] = {}
+          this.branches[ci].directions = data.directions
+          this.branches[ci].selectedDirectionIndices = null
+          this.branches[ci].directionBranches = {}
+        })
+        await Promise.all(promises)
+        this.activeStep = 2
+        this.activeConceptTab = this.selectedConceptIndices[0]
+      } catch (e) {
+        this.error = e.message
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async confirmDirectionSelect() {
+      const ci = this.activeConceptTab
+      const selected = this.tempDirSelects[ci] || []
+      if (selected.length === 0) return
+      try {
+        await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/directions/select`, { indices: selected })
+        this.branches[ci].selectedDirectionIndices = [...selected]
+        // Init direction branches
+        for (const di of selected) {
+          if (!this.branches[ci].directionBranches) this.branches[ci].directionBranches = {}
+          this.branches[ci].directionBranches[di] = { scripts: null, selectedScriptIndices: null, scriptBranches: {} }
+        }
+        delete this.tempDirSelects[ci]
+        this.tempDirSelects = { ...this.tempDirSelects }
+
+        // Check if all concept branches have directions selected
+        const allDone = this.selectedConceptIndices.every(ci2 => {
+          const cb = this.branches[ci2]
+          return cb && cb.selectedDirectionIndices && cb.selectedDirectionIndices.length > 0
+        })
+
+        if (allDone) {
+          // Auto-generate scripts for all paths
+          const totalTasks = this.selectedConceptIndices.reduce((sum, ci2) => sum + (this.branches[ci2].selectedDirectionIndices?.length || 0), 0)
+          this.confirmModalMsg = `已选定方向，将为 ${totalTasks} 条路径分别生成脚本。`
+          this.confirmTaskCount = totalTasks
+          this.confirmedAction = async () => {
+            await this.genAllScripts()
+          }
+          this.showConfirmModal = true
+        }
+      } catch (e) {
+        this.error = e.message
+      }
+    },
+
+    // ── Script generation ──
+    async genScripts(ci, di, feedback = '') {
+      this.loading = true
+      this.loadingMsg = '正在生成脚本...'
+      this.error = null
+      this.showFeedback = false
+      this.feedback = ''
+      const key = `${ci}_${di}`
+      delete this.tempScriptSelects[key]
+      this.tempScriptSelects = { ...this.tempScriptSelects }
+      try {
+        const data = await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/scripts`, { feedback })
+        if (!this.branches[ci].directionBranches) this.branches[ci].directionBranches = {}
+        if (!this.branches[ci].directionBranches[di]) this.branches[ci].directionBranches[di] = {}
+        this.branches[ci].directionBranches[di].scripts = data.scripts
+        this.branches[ci].directionBranches[di].selectedScriptIndices = null
+        this.branches[ci].directionBranches[di].scriptBranches = {}
+        this.activeStep = 3
+        this.activeConceptTab = ci
+        this.activeDirectionTab = di
+      } catch (e) {
+        this.error = e.message
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async genAllScripts() {
+      this.loading = true
+      this.loadingMsg = '正在为所有路径生成脚本...'
+      this.error = null
+      try {
+        const promises = []
+        for (const ci of this.selectedConceptIndices) {
+          const cb = this.branches[ci]
+          for (const di of (cb.selectedDirectionIndices || [])) {
+            promises.push((async () => {
+              const data = await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/scripts`)
+              if (!cb.directionBranches) cb.directionBranches = {}
+              if (!cb.directionBranches[di]) cb.directionBranches[di] = {}
+              cb.directionBranches[di].scripts = data.scripts
+              cb.directionBranches[di].selectedScriptIndices = null
+              cb.directionBranches[di].scriptBranches = {}
+            })())
+          }
+        }
+        await Promise.all(promises)
+        this.activeStep = 3
+        this.activeConceptTab = this.selectedConceptIndices[0]
+        const cb = this.branches[this.activeConceptTab]
+        this.activeDirectionTab = cb.selectedDirectionIndices?.[0] ?? null
+      } catch (e) {
+        this.error = e.message
+      } finally {
+        this.loading = false
+      }
+    },
+
+    async confirmScriptSelect() {
+      const ci = this.activeConceptTab
+      const di = this.activeDirectionTab
+      const key = `${ci}_${di}`
+      const selected = this.tempScriptSelects[key] || []
+      if (selected.length === 0) return
+      const db = this.branches[ci].directionBranches[di]
+      try {
+        await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/scripts/select`, { indices: selected })
+        db.selectedScriptIndices = [...selected]
+        // Init script branches
+        if (!db.scriptBranches) db.scriptBranches = {}
+        for (const si of selected) {
+          db.scriptBranches[si] = { confirmed_style: '', images: null, generating: false, genError: null }
+        }
+        delete this.tempScriptSelects[key]
+        this.tempScriptSelects = { ...this.tempScriptSelects }
+
+        // If all paths have scripts selected, move to image step
+        if (this.isStepDone(3)) {
+          this.activeStep = 4
+          this.activeScriptTab = db.selectedScriptIndices[0]
+        }
+      } catch (e) {
+        this.error = e.message
+      }
+    },
+
+    switchConceptTab(ci) {
+      this.activeConceptTab = ci
+      const cb = this.branches[ci]
+      if (cb && cb.selectedDirectionIndices && cb.selectedDirectionIndices.length > 0) {
+        this.activeDirectionTab = cb.selectedDirectionIndices[0]
+      } else {
+        this.activeDirectionTab = null
+      }
+    },
+
+    // ── Style modal ──
+    openStyleModal() {
+      const db = this.currentDirBranch
+      const si = this.activeScriptTab
+      if (db && db.scripts && si !== null) {
+        this.styleRecommended = db.scripts[si]?.visual_style || ''
+        this.styleInput = this.styleRecommended || '写实摄影风'
+      }
+      this.showStyleModal = true
+    },
+
+    async confirmStyleAndGenImages() {
+      this.showStyleModal = false
+      const ci = this.activeConceptTab
+      const di = this.activeDirectionTab
+      const si = this.activeScriptTab
+
+      const db = this.branches[ci].directionBranches[di]
+      const sb = db.scriptBranches[si]
+
+      try {
+        // Confirm style
+        await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/${si}/style`, { style: this.styleInput })
+        sb.confirmed_style = this.styleInput
+        // Mark as generating (non-blocking)
+        sb.generating = true
+        this.branches = { ...this.branches } // trigger reactivity
+
+        // Fire off image generation in background (don't await blocking the UI)
+        this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/${si}/images`)
+          .then(data => {
+            sb.images = data.images
+            sb.generating = false
+            this.branches = { ...this.branches }
+          })
+          .catch(e => {
+            sb.generating = false
+            sb.genError = e.message
+            this.branches = { ...this.branches }
+          })
+      } catch (e) {
+        this.error = e.message
+      }
+    },
+
+    // ── Regen ──
+    regenStep(step) {
+      this.showFeedback = true
+      this.activeStep = step
+    },
+
+    async regenDirections() {
+      this.showFeedback = true
+    },
+
+    async regenScripts() {
+      this.showFeedback = true
+    },
+
+    // ── Summary ──
+    async loadSummary() {
+      this.summaryLoading = true
+      try {
+        const data = await this.api('GET', `/api/campaigns/${this.campaignId}/summary`)
+        this.summaryPlans = data.plans.map(p => ({ ...p, _expanded: false }))
+        // Auto-expand first
+        if (this.summaryPlans.length > 0) this.summaryPlans[0]._expanded = true
+      } catch (e) {
+        this.error = e.message
+      } finally {
+        this.summaryLoading = false
+      }
+    },
+
+    // ── Reset ──
+    resetAll() {
+      this.campaignId = null
+      this.brandName = ''
+      this.concepts = []
+      this.selectedConceptIndices = []
+      this.branches = {}
+      this.activeStep = 0
+      this.activeConceptTab = null
+      this.activeDirectionTab = null
+      this.activeScriptTab = null
+      this.tempMultiSelect = []
+      this.tempDirSelects = {}
+      this.tempScriptSelects = {}
+      this.loading = false
+      this.error = null
+      this.showFeedback = false
+      this.feedback = ''
+      this.summaryPlans = []
+    },
+  },
+
+  async mounted() {
+    try {
+      const data = await this.api('GET', '/api/brands')
+      this.brands = data.brands
+      if (this.brands.length === 1) this.form.brand_id = this.brands[0].id
+    } catch (e) {
+      console.error('Failed to load brands:', e)
+    }
+  },
+}).mount('#app')
+</script>
+</body>
+</html>

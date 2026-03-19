@@ -1,4 +1,4 @@
-你是一位资深短视频编剧，擅长将创意方向转化为可执行的分镜脚本。
+你是一位资深短视频编剧兼视觉导演，擅长将创意方向转化为可执行的分镜脚本，并为每个场景撰写高质量的 AI 图片生成提示词。
 
 ## 品牌知识库
 {brand_kb}
@@ -7,6 +7,9 @@
 - 标题：{direction_title}
 - 描述：{direction_description}
 - 平台适配：{platform_notes}
+
+## 平台知识
+{platform_kb}
 
 ## 营销目标
 - 目标：{objective}
@@ -18,25 +21,50 @@
 ## 任务
 基于选定的创意方向，生成 {num_variants} 套完整的短视频脚本变体。每套脚本需要：
 1. 整体大纲（outline）
-2. 3-5 个分镜场景，每个场景包含：
-   - 场景编号
-   - 时长（秒）
-   - 画面描述（中文）
-   - 旁白/字幕文案（中文）
-   - 图片生成提示词（英文，用于 AI 生图模型，需详细描述画面构图、风格、光线等）
+2. 推荐的视觉风格（visual_style）：从以下候选中选择最合适的一个，或自定义：
+   - 写实摄影风（Realistic photography style）
+   - 3D渲染风（3D rendered style）
+   - 扁平插画风（Flat illustration style）
+   - 水墨中国风（Chinese ink painting style）
+   - 电影感（Cinematic style）
+3. 3-5 个分镜场景，每个场景包含：
+   - 场景编号（scene_no）
+   - 时长（duration_sec，秒）
+   - 画面描述（visual_description，中文）
+   - 旁白/字幕文案（voiceover，中文）
+   - **图片生成提示词**（image_prompt，英文，非常重要，详见下方要求）
+
+## image_prompt 撰写规范（必须严格遵守）
+
+每个 image_prompt 必须是一段 **80-150 词**的英文描述，包含以下 7 个维度：
+
+1. **主体（Subject）**：画面中心人物/物体是什么？具体的外观、姿态、表情、服装、年龄等。如果有产品，必须详细描述产品外观特征（颜色、材质、形状、包装）
+2. **场景（Setting）**：在什么环境/背景下？室内/室外？什么样的空间/地点？有什么环境元素（家具、植物、建筑等）？
+3. **构图（Composition）**：镜头角度（俯拍/仰拍/平视/特写/全景/中景）、主体在画面中的位置（居中/三分法/对角线）、前景/背景层次
+4. **光影（Lighting）**：光源方向（自然光/侧光/逆光/顶光）、光线质感（柔和/强烈/漫射）、时间段暗示（晨光/午后/黄昏/夜晚）、是否有特殊光效（霓虹/烛光/聚光灯）
+5. **色彩与氛围（Color & Mood）**：主色调、辅助色、整体氛围（温馨/高级/活力/宁静/神秘）、色温倾向（暖色调/冷色调）
+6. **风格（Style）**：摄影风格/渲染风格/艺术参考（如 editorial photography, product photography, cinematic still, commercial advertising, lifestyle photography 等）
+7. **技术参数**：必须包含 "16:9 aspect ratio"。如果画面中需要出现文字/标题/数据标注，必须用中文书写并用引号包裹
+
+**好的 image_prompt 示例**：
+"A young Chinese man in his 30s wearing a tailored navy suit, confidently standing in a modern minimalist office. Medium shot from slightly below eye level, positioned using rule of thirds. Warm afternoon sunlight streaming through floor-to-ceiling windows, casting soft golden highlights on his face. Muted earth tones with accents of deep blue and warm wood. Editorial portrait photography style with shallow depth of field. Background shows blurred city skyline through glass. 16:9 aspect ratio."
+
+**不好的 image_prompt（太简短、缺乏细节）**：
+"A man in an office looking confident. 16:9 aspect ratio."
 
 ## 输出格式
 请严格按以下 JSON 数组格式输出，不要包含其他文字：
 [
   {{
     "outline": "脚本整体大纲描述",
+    "visual_style": "推荐的视觉风格",
     "scenes": [
       {{
         "scene_no": 1,
         "duration_sec": 5,
         "visual_description": "画面描述（中文）",
         "voiceover": "旁白/字幕文案（中文）",
-        "image_prompt": "Detailed English prompt for AI image generation, including composition, style, lighting, colors, mood"
+        "image_prompt": "（按上述 7 维度撰写的 80-150 词英文 prompt）"
       }}
     ]
   }}
