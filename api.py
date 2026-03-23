@@ -1,12 +1,13 @@
 """FastAPI backend for AIGC Creative Workflow — multi-select branching."""
 
 import asyncio
+import json as jsonlib
 import os
 import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -22,8 +23,9 @@ from modules.platform_kb import PlatformKBReader
 from modules.script_gen import ScriptGenerator
 from modules.tracker import CampaignTracker
 
-# Concurrency limiter for LLM calls
-llm_semaphore = asyncio.Semaphore(3)
+# Concurrency limiters
+llm_semaphore = asyncio.Semaphore(3)   # text LLM (Claude)
+image_semaphore = asyncio.Semaphore(10)  # individual Gemini image API calls
 
 
 @asynccontextmanager
@@ -231,6 +233,8 @@ async def select_concepts(cid: str, req: MultiSelectReq):
     s = _get(cid)
     if not s["concepts"]:
         raise HTTPException(400, "Generate concepts first")
+    if not req.indices:
+        raise HTTPException(400, "Must select at least one concept")
     for idx in req.indices:
         if not (0 <= idx < len(s["concepts"])):
             raise HTTPException(400, f"Invalid index: {idx}")
@@ -282,6 +286,7 @@ async def generate_directions(cid: str, ci: int, req: FeedbackReq = None):
 
 @app.post("/api/campaigns/{cid}/branches/{ci}/directions/select")
 async def select_directions(cid: str, ci: int, req: MultiSelectReq):
+    """Select directions. Pass indices=[] to skip this concept branch entirely."""
     s = _get(cid)
     branch = _get_concept_branch(s, ci)
     if not branch["directions"]:
@@ -299,11 +304,13 @@ async def select_directions(cid: str, ci: int, req: MultiSelectReq):
         }
         for di in req.indices
     ]
+    branch["skipped"] = len(req.indices) == 0
     return {
         "selected": [
             {"index": di, "title": branch["directions"][di].title}
             for di in req.indices
-        ]
+        ],
+        "skipped": branch["skipped"],
     }
 
 
@@ -335,6 +342,7 @@ async def generate_scripts(cid: str, ci: int, di: int, req: FeedbackReq = None):
 
 @app.post("/api/campaigns/{cid}/branches/{ci}/{di}/scripts/select")
 async def select_scripts(cid: str, ci: int, di: int, req: MultiSelectReq):
+    """Select scripts. Pass indices=[] to skip this direction branch entirely."""
     s = _get(cid)
     concept_branch = _get_concept_branch(s, ci)
     dir_branch = _get_direction_branch(concept_branch, di)
@@ -352,11 +360,13 @@ async def select_scripts(cid: str, ci: int, di: int, req: MultiSelectReq):
         }
         for si in req.indices
     ]
+    dir_branch["skipped"] = len(req.indices) == 0
     return {
         "selected": [
             {"index": si, "outline": dir_branch["scripts"][si].outline}
             for si in req.indices
-        ]
+        ],
+        "skipped": dir_branch["skipped"],
     }
 
 
@@ -386,11 +396,19 @@ async def generate_images(cid: str, ci: int, di: int, si: int, req: FeedbackReq 
     script = dir_branch["scripts"][si]
     visual_style = script_branch.get("confirmed_style", "")
     gen = ImageGenerator()
-    async with llm_semaphore:
-        result = await asyncio.to_thread(
-            gen.generate, s["goal"], script, feedback=req.feedback,
-            visual_style=visual_style, reference_images=s.get("brand_images"),
-        )
+    branch_prefix = f"c{ci}_d{di}_s{si}"
+    tasks = gen.prepare(
+        s["goal"], script, feedback=req.feedback,
+        visual_style=visual_style, reference_images=s.get("brand_images"),
+        branch_prefix=branch_prefix,
+    )
+    # Generate all images for this branch with concurrency control
+    async def gen_one(t):
+        async with image_semaphore:
+            await asyncio.to_thread(gen.generate_single, t)
+
+    await asyncio.gather(*[gen_one(t) for t in tasks])
+    result = gen.finalize(s["goal"], script, tasks, req.feedback)
     script_branch["images"] = result.images
     return {
         "concept_index": ci,
@@ -428,37 +446,201 @@ async def estimate_tasks(cid: str):
     }
 
 
+def _sse_event(data: dict) -> str:
+    """Format a dict as an SSE data line."""
+    return f"data: {jsonlib.dumps(data, ensure_ascii=False)}\n\n"
+
+
 # ── Batch generation helpers ──
 
 
-@app.post("/api/campaigns/{cid}/branches/{ci}/directions/generate_all")
-async def generate_all_scripts_for_concept(cid: str, ci: int):
-    """Generate scripts for all selected directions in a concept branch concurrently."""
+@app.post("/api/campaigns/{cid}/directions/generate_all")
+async def generate_all_directions(cid: str):
+    """Generate directions for ALL selected concept branches concurrently. Returns SSE stream."""
     s = _get(cid)
-    concept_branch = _get_concept_branch(s, ci)
-    dir_branches = concept_branch.get("direction_branches") or []
-    if not dir_branches:
-        raise HTTPException(400, "Select directions first")
+    branches = s.get("branches") or []
+    if not branches:
+        raise HTTPException(400, "Select concepts first")
 
-    async def gen_scripts(db):
-        di = db["direction_index"]
-        direction = concept_branch["directions"][di]
+    # Build sibling info
+    sibling_map = {}
+    for cb in branches:
+        ci = cb["concept_index"]
+        others = [
+            f"- 理念「{s['concepts'][ob['concept_index']].title}」: {s['concepts'][ob['concept_index']].description}"
+            for ob in branches if ob["concept_index"] != ci
+        ]
+        sibling_map[ci] = "\n".join(others) if others else ""
+
+    async def gen_directions(cb):
+        ci = cb["concept_index"]
+        concept = s["concepts"][ci]
+        gen = DirectionGenerator()
+        async with llm_semaphore:
+            result = await asyncio.to_thread(
+                gen.generate, s["goal"], s["brand_kb"], concept, "",
+                platform_kb=s["platform_kb"],
+                sibling_info=sibling_map[ci],
+            )
+        cb["directions"] = result.directions
+        cb["selected_direction_indices"] = None
+        cb["direction_branches"] = None
+        return {
+            "concept_index": ci,
+            "directions": [
+                {"id": d.id, "title": d.title, "description": d.description, "platform_notes": d.platform_notes}
+                for d in result.directions
+            ],
+        }
+
+    async def stream():
+        tasks = [asyncio.create_task(gen_directions(cb)) for cb in branches]
+        yield _sse_event({"type": "start", "total": len(tasks)})
+        for coro in asyncio.as_completed(tasks):
+            try:
+                result = await coro
+                yield _sse_event({"type": "item", **result})
+            except Exception as e:
+                yield _sse_event({"type": "error", "message": str(e)})
+        yield _sse_event({"type": "done"})
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@app.post("/api/campaigns/{cid}/scripts/generate_all")
+async def generate_all_scripts(cid: str):
+    """Generate scripts for ALL direction branches concurrently. Returns SSE stream."""
+    s = _get(cid)
+    branches = s.get("branches") or []
+    if not branches:
+        raise HTTPException(400, "No concept branches")
+
+    # Collect all pending tasks and build sibling info
+    pending = []
+    all_directions = []
+    for cb in branches:
+        ci = cb["concept_index"]
+        for db in (cb.get("direction_branches") or []):
+            di = db["direction_index"]
+            direction = cb["directions"][di]
+            all_directions.append((ci, di, direction))
+            if db.get("scripts") is not None:
+                continue
+            pending.append((ci, di, direction, db))
+
+    if not pending:
+        raise HTTPException(400, "No pending script generation tasks")
+
+    sibling_map = {}
+    for ci, di, direction in all_directions:
+        others = [
+            f"- 方向「{od.title}」(理念{oci}): {od.description}"
+            for oci, odi, od in all_directions if (oci, odi) != (ci, di)
+        ]
+        sibling_map[(ci, di)] = "\n".join(others) if others else ""
+
+    async def gen_scripts(ci, di, direction, db):
         gen = ScriptGenerator()
         async with llm_semaphore:
             result = await asyncio.to_thread(
                 gen.generate, s["goal"], s["brand_kb"], direction,
                 platform_kb=s["platform_kb"],
+                sibling_info=sibling_map[(ci, di)],
             )
         db["scripts"] = result.scripts
         db["selected_script_indices"] = None
         db["script_branches"] = None
         return {
+            "concept_index": ci,
             "direction_index": di,
             "scripts": [_serialize_script(sc) for sc in result.scripts],
         }
 
-    results = await asyncio.gather(*[gen_scripts(db) for db in dir_branches])
-    return {"results": results}
+    async def stream():
+        tasks = [asyncio.create_task(gen_scripts(ci, di, d, db)) for ci, di, d, db in pending]
+        yield _sse_event({"type": "start", "total": len(tasks)})
+        for coro in asyncio.as_completed(tasks):
+            try:
+                result = await coro
+                yield _sse_event({"type": "item", **result})
+            except Exception as e:
+                yield _sse_event({"type": "error", "message": str(e)})
+        yield _sse_event({"type": "done"})
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@app.post("/api/campaigns/{cid}/images/generate_all")
+async def generate_all_images(cid: str):
+    """Generate images for ALL script branches concurrently. Returns SSE stream.
+
+    Flattens all individual image tasks into a single pool (max 40 concurrent),
+    then streams branch-level results as each branch's images are all done.
+    """
+    s = _get(cid)
+    branches = s.get("branches") or []
+    if not branches:
+        raise HTTPException(400, "No concept branches")
+
+    gen = ImageGenerator()
+    branch_tasks = []
+    total_images = 0
+
+    for cb in branches:
+        ci = cb["concept_index"]
+        for db in (cb.get("direction_branches") or []):
+            di = db["direction_index"]
+            for sb in (db.get("script_branches") or []):
+                si = sb["script_index"]
+                if sb.get("images") is not None:
+                    continue
+                script = db["scripts"][si]
+                visual_style = sb.get("confirmed_style", "")
+                tasks = gen.prepare(
+                    s["goal"], script,
+                    visual_style=visual_style,
+                    reference_images=s.get("brand_images"),
+                    branch_prefix=f"c{ci}_d{di}_s{si}",
+                )
+                branch_tasks.append((ci, di, si, script, sb, tasks))
+                total_images += len(tasks)
+
+    if not branch_tasks:
+        raise HTTPException(400, "No pending image generation tasks")
+
+    logger.info(f"  调度 {total_images} 张图片生成（{len(branch_tasks)} 个分支），最大并发 {image_semaphore._value}")
+
+    async def gen_one(t):
+        async with image_semaphore:
+            await asyncio.to_thread(gen.generate_single, t)
+
+    async def gen_branch(ci, di, si, script, sb, tasks):
+        """Generate all images for one branch, then finalize."""
+        await asyncio.gather(*[gen_one(t) for t in tasks])
+        result = gen.finalize(s["goal"], script, tasks)
+        sb["images"] = result.images
+        return {
+            "concept_index": ci,
+            "direction_index": di,
+            "script_index": si,
+            "images": [_serialize_image(img) for img in result.images],
+        }
+
+    async def stream():
+        coros = [
+            asyncio.create_task(gen_branch(ci, di, si, sc, sb, tasks))
+            for ci, di, si, sc, sb, tasks in branch_tasks
+        ]
+        yield _sse_event({"type": "start", "total_branches": len(coros), "total_images": total_images})
+        for coro in asyncio.as_completed(coros):
+            try:
+                result = await coro
+                yield _sse_event({"type": "item", **result})
+            except Exception as e:
+                yield _sse_event({"type": "error", "message": str(e)})
+        yield _sse_event({"type": "done"})
+
+    return StreamingResponse(stream(), media_type="text/event-stream")
 
 
 # ── Summary — all creative plans ──
@@ -492,6 +674,7 @@ async def campaign_summary(cid: str):
 # ── Static files ──
 
 app.mount("/output", StaticFiles(directory="output"), name="output")
+app.mount("/brands", StaticFiles(directory="brands"), name="brands")
 
 
 @app.get("/")

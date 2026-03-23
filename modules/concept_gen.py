@@ -39,7 +39,7 @@ class ConceptGenerator:
 
         input_hash = hashlib.md5(user_content.encode("utf-8")).hexdigest()
 
-        raw_text = call_llm(user_content)
+        raw_text = call_llm(user_content, max_tokens=8192)
         concepts_data = parse_json_array(raw_text)
 
         concepts = [

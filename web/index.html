@@ -255,6 +255,7 @@
                 class="px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap"
                 :class="activeConceptTab === ci ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'">
                 {{ truncate(concepts[ci].title, 15) }}
+                <span v-if="(tempDirSelects[ci] || []).length > 0" class="ml-1 text-xs text-emerald-500">({{ (tempDirSelects[ci] || []).length }})</span>
               </button>
             </div>
             <!-- Direction cards for active tab -->
@@ -275,18 +276,17 @@
                   <p class="text-xs text-slate-400 mt-3"><span class="font-medium text-slate-500">平台适配：</span>{{ d.platform_notes }}</p>
                 </div>
               </div>
-              <div v-if="!(currentBranch.selectedDirectionIndices && currentBranch.selectedDirectionIndices.length > 0)" class="mt-6 flex items-center gap-4">
-                <button @click="confirmDirectionSelect" :disabled="tempDirSelect.length === 0"
-                  class="px-6 py-2.5 rounded-lg text-sm font-medium text-white transition"
-                  :class="tempDirSelect.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'">
-                  确认选择 {{ tempDirSelect.length }} 个方向
-                </button>
+              <!-- Per-tab status -->
+              <div class="mt-4 flex items-center gap-3">
+                <span v-if="tempDirSelect.length > 0" class="text-sm text-indigo-600 font-medium">
+                  已选 {{ tempDirSelect.length }} 个方向
+                </span>
+                <span v-else class="text-sm text-slate-400">
+                  未选择（将跳过该理念）
+                </span>
                 <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成...</button>
               </div>
-              <div v-else class="mt-6">
-                <button @click="regenDirections" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成方向...</button>
-              </div>
-              <div v-if="showFeedback && !(currentBranch.selectedDirectionIndices && currentBranch.selectedDirectionIndices.length > 0)" class="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <div v-if="showFeedback" class="mt-3 bg-slate-50 rounded-xl p-4 border border-slate-200">
                 <textarea v-model="feedback" rows="2" placeholder="输入修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
                 <button @click="genDirections(activeConceptTab, feedback)" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成</button>
               </div>
@@ -295,6 +295,28 @@
               <button @click="genDirections(activeConceptTab)" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
                 为"{{ truncate(concepts[activeConceptTab].title, 15) }}"生成方向
               </button>
+            </div>
+            <!-- Unified selection summary + confirm button -->
+            <div v-if="allDirectionsGenerated" class="mt-8 bg-white rounded-xl border-2 border-indigo-100 p-5">
+              <h4 class="text-sm font-bold text-slate-700 mb-3">选择汇总</h4>
+              <div class="space-y-1.5 mb-4">
+                <div v-for="ci2 in selectedConceptIndices" :key="'dsum-'+ci2" class="flex items-center gap-2 text-sm">
+                  <span class="text-slate-500">{{ truncate(concepts[ci2]?.title, 15) }}:</span>
+                  <span v-if="(tempDirSelects[ci2] || []).length > 0" class="text-indigo-600 font-medium">
+                    {{ (tempDirSelects[ci2] || []).length }} 个方向
+                  </span>
+                  <span v-else class="text-amber-500">跳过</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-4">
+                <button @click="confirmAllDirectionSelects"
+                  class="px-6 py-2.5 rounded-lg text-sm font-medium text-white transition"
+                  :class="totalTempDirections > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'"
+                  :disabled="totalTempDirections === 0">
+                  确认全部选择（共 {{ totalTempDirections }} 个方向）
+                </button>
+                <span v-if="totalTempDirections === 0" class="text-sm text-amber-600">至少选择一个方向</span>
+              </div>
             </div>
           </template>
 
@@ -310,14 +332,16 @@
                 <span class="text-indigo-600 font-medium">{{ currentDirBranch ? truncate(currentBranch.directions[activeDirectionTab]?.title, 12) : '...' }}</span>
               </div>
             </div>
-            <!-- Concept tabs -->
+            <!-- Concept tabs (only show concepts that have directions selected) -->
             <div class="flex border-b border-slate-200 mb-4 overflow-x-auto">
-              <button v-for="ci in selectedConceptIndices" :key="ci"
-                @click="switchConceptTab(ci)"
-                class="px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap"
-                :class="activeConceptTab === ci ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'">
-                {{ truncate(concepts[ci].title, 12) }}
-              </button>
+              <template v-for="ci in selectedConceptIndices" :key="ci">
+                <button v-if="(branches[ci]?.selectedDirectionIndices || []).length > 0"
+                  @click="switchConceptTab(ci)"
+                  class="px-4 py-2 text-sm font-medium border-b-2 transition whitespace-nowrap"
+                  :class="activeConceptTab === ci ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'">
+                  {{ truncate(concepts[ci].title, 12) }}
+                </button>
+              </template>
             </div>
             <!-- Direction sub-tabs -->
             <div v-if="currentBranch && currentBranch.selectedDirectionIndices" class="flex border-b border-slate-100 mb-6 overflow-x-auto">
@@ -326,6 +350,7 @@
                 class="px-3 py-1.5 text-xs font-medium border-b-2 transition whitespace-nowrap"
                 :class="activeDirectionTab === di ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400 hover:text-slate-600'">
                 {{ truncate(currentBranch.directions[di].title, 15) }}
+                <span v-if="(tempScriptSelects[activeConceptTab+'_'+di] || []).length > 0" class="ml-1 text-emerald-500">({{ (tempScriptSelects[activeConceptTab+'_'+di] || []).length }})</span>
               </button>
             </div>
             <!-- Script cards -->
@@ -358,18 +383,17 @@
                   </div>
                 </div>
               </div>
-              <div v-if="!(currentDirBranch.selectedScriptIndices && currentDirBranch.selectedScriptIndices.length > 0)" class="mt-6 flex items-center gap-4">
-                <button @click="confirmScriptSelect" :disabled="tempScriptSelect.length === 0"
-                  class="px-6 py-2.5 rounded-lg text-sm font-medium text-white transition"
-                  :class="tempScriptSelect.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'">
-                  确认选择 {{ tempScriptSelect.length }} 套{{ isGraphicPlatform ? '图文方案' : '脚本' }}
-                </button>
+              <!-- Per-tab status: show current selection or skip hint -->
+              <div class="mt-4 flex items-center gap-3">
+                <span v-if="tempScriptSelect.length > 0" class="text-sm text-indigo-600 font-medium">
+                  已选 {{ tempScriptSelect.length }} 套{{ isGraphicPlatform ? '图文方案' : '脚本' }}
+                </span>
+                <span v-else class="text-sm text-slate-400">
+                  未选择（将跳过该方向）
+                </span>
                 <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成...</button>
               </div>
-              <div v-else class="mt-6">
-                <button @click="regenScripts" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成{{ isGraphicPlatform ? '图文方案' : '脚本' }}...</button>
-              </div>
-              <div v-if="showFeedback && !(currentDirBranch.selectedScriptIndices && currentDirBranch.selectedScriptIndices.length > 0)" class="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <div v-if="showFeedback" class="mt-3 bg-slate-50 rounded-xl p-4 border border-slate-200">
                 <textarea v-model="feedback" rows="2" placeholder="输入修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
                 <button @click="genScripts(activeConceptTab, activeDirectionTab, feedback)" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成</button>
               </div>
@@ -378,6 +402,32 @@
               <button @click="genScripts(activeConceptTab, activeDirectionTab)" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
                 生成{{ isGraphicPlatform ? '图文方案' : '脚本' }}
               </button>
+            </div>
+            <!-- Unified selection summary + confirm button -->
+            <div v-if="allScriptsGenerated" class="mt-8 bg-white rounded-xl border-2 border-indigo-100 p-5">
+              <h4 class="text-sm font-bold text-slate-700 mb-3">选择汇总</h4>
+              <div class="space-y-1.5 mb-4">
+                <template v-for="ci2 in selectedConceptIndices" :key="'sum-c'+ci2">
+                  <template v-for="di2 in (branches[ci2]?.selectedDirectionIndices || [])" :key="'sum-d'+di2">
+                    <div class="flex items-center gap-2 text-sm">
+                      <span class="text-slate-500">{{ truncate(concepts[ci2]?.title, 10) }} &gt; {{ truncate(branches[ci2]?.directions?.[di2]?.title, 10) }}:</span>
+                      <span v-if="(tempScriptSelects[ci2+'_'+di2] || []).length > 0" class="text-indigo-600 font-medium">
+                        {{ (tempScriptSelects[ci2+'_'+di2] || []).length }} 套
+                      </span>
+                      <span v-else class="text-amber-500">跳过</span>
+                    </div>
+                  </template>
+                </template>
+              </div>
+              <div class="flex items-center gap-4">
+                <button @click="confirmAllScriptSelects"
+                  class="px-6 py-2.5 rounded-lg text-sm font-medium text-white transition"
+                  :class="totalTempScripts > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'"
+                  :disabled="totalTempScripts === 0">
+                  确认全部选择（共 {{ totalTempScripts }} 套{{ isGraphicPlatform ? '方案' : '脚本' }}）
+                </button>
+                <span v-if="totalTempScripts === 0" class="text-sm text-amber-600">至少选择一套方案</span>
+              </div>
             </div>
           </template>
 
@@ -445,6 +495,18 @@
                 </template>
               </template>
             </template>
+            <!-- Batch generate all images -->
+            <div v-if="pendingImageBranches > 0" class="mt-6 bg-indigo-50 rounded-xl border border-indigo-200 p-4 flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-indigo-800">还有 {{ pendingImageBranches }} 个方案未生成配图</p>
+                <p class="text-xs text-indigo-600 mt-0.5">使用统一风格一键并发生成，所有图片同时开始</p>
+              </div>
+              <button @click="batchGenerateAllImages" :disabled="batchImageGenerating"
+                class="px-5 py-2.5 rounded-lg text-sm font-medium text-white transition whitespace-nowrap"
+                :class="batchImageGenerating ? 'bg-slate-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'">
+                {{ batchImageGenerating ? '生成中...' : '一键生成全部配图' }}
+              </button>
+            </div>
             <!-- Generation progress overview -->
             <div class="mt-6 bg-white rounded-xl border border-slate-200 p-4">
               <h4 class="text-sm font-medium text-slate-700 mb-3">配图生成进度</h4>
@@ -634,6 +696,27 @@
     </div>
   </div>
 
+  <!-- API Logs Panel -->
+  <div v-if="campaignId" class="fixed bottom-0 right-0 z-40" style="width:480px;">
+    <button @click="showApiLogs = !showApiLogs"
+      class="ml-auto flex items-center gap-2 px-3 py-1.5 bg-slate-800 text-slate-300 text-xs rounded-tl-lg hover:bg-slate-700 transition">
+      <span>API 日志 ({{ apiLogs.length }})</span>
+      <span>{{ showApiLogs ? '▼' : '▲' }}</span>
+    </button>
+    <div v-if="showApiLogs" class="bg-slate-900 text-xs font-mono max-h-60 overflow-y-auto p-3 border-t border-slate-700">
+      <div v-if="apiLogs.length === 0" class="text-slate-500">暂无请求</div>
+      <div v-for="(log, i) in apiLogs.slice().reverse()" :key="i" class="py-1 border-b border-slate-800 last:border-0">
+        <span class="text-slate-500">{{ log.ts }}</span>
+        <span class="ml-2 font-bold" :class="log.method === 'POST' ? 'text-amber-400' : 'text-emerald-400'">{{ log.method }}</span>
+        <span class="ml-1 text-slate-300">{{ log.url }}</span>
+        <span v-if="log.body" class="ml-1 text-slate-500">{{ log.body.length > 60 ? log.body.slice(0, 60) + '...' : log.body }}</span>
+        <span class="ml-2" :class="log.status >= 200 && log.status < 300 ? 'text-emerald-400' : log.status === '...' ? 'text-slate-500' : 'text-red-400'">{{ log.status }}</span>
+        <span class="ml-1 text-slate-500">{{ log.duration }}</span>
+        <div v-if="log.error" class="text-red-400 mt-0.5 pl-4">{{ log.error }}</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -675,6 +758,9 @@ createApp({
 
       // Confirm modal
       showConfirmModal: false,
+      apiLogs: [],
+      showApiLogs: false,
+      batchImageGenerating: false,
       confirmModalMsg: '',
       confirmTaskCount: 0,
       confirmedAction: null,
@@ -736,6 +822,61 @@ createApp({
       const key = `${this.activeConceptTab}_${this.activeDirectionTab}`
       return this.tempScriptSelects[key] || []
     },
+    allDirectionsGenerated() {
+      // True when all concept branches have directions generated
+      for (const ci of this.selectedConceptIndices) {
+        const cb = this.branches[ci]
+        if (!cb || !cb.directions) return false
+      }
+      return this.selectedConceptIndices.length > 0
+    },
+    totalTempDirections() {
+      let total = 0
+      for (const ci of this.selectedConceptIndices) {
+        total += (this.tempDirSelects[ci] || []).length
+      }
+      return total
+    },
+    allScriptsGenerated() {
+      // True when all direction branches have scripts generated (regardless of selection)
+      for (const ci of this.selectedConceptIndices) {
+        const cb = this.branches[ci]
+        if (!cb || !cb.selectedDirectionIndices) return false
+        for (const di of cb.selectedDirectionIndices) {
+          const db = cb.directionBranches?.[di]
+          if (!db || !db.scripts) return false
+        }
+      }
+      return this.selectedConceptIndices.length > 0
+    },
+    totalTempScripts() {
+      let total = 0
+      for (const ci of this.selectedConceptIndices) {
+        const cb = this.branches[ci]
+        if (!cb) continue
+        for (const di of (cb.selectedDirectionIndices || [])) {
+          const key = `${ci}_${di}`
+          total += (this.tempScriptSelects[key] || []).length
+        }
+      }
+      return total
+    },
+    pendingImageBranches() {
+      let count = 0
+      for (const ci of this.selectedConceptIndices) {
+        const cb = this.branches[ci]
+        if (!cb) continue
+        for (const di of (cb.selectedDirectionIndices || [])) {
+          const db = cb.directionBranches?.[di]
+          if (!db) continue
+          for (const si of (db.selectedScriptIndices || [])) {
+            const sb = db.scriptBranches?.[si]
+            if (sb && !sb.images && !sb.generating) count++
+          }
+        }
+      }
+      return count
+    },
     allImagesGenerated() {
       if (!this.isStepDone(3)) return false
       for (const ci of this.selectedConceptIndices) {
@@ -769,14 +910,76 @@ createApp({
   methods: {
     // ── API helpers ──
     async api(method, url, body = null) {
+      const ts = new Date().toLocaleTimeString()
+      const bodyPreview = body ? JSON.stringify(body) : ''
+      this.apiLogs.push({ ts, method, url, body: bodyPreview, status: '...', duration: '' })
+      const logIdx = this.apiLogs.length - 1
+      const t0 = performance.now()
       const opts = { method, headers: { 'Content-Type': 'application/json' } }
       if (body) opts.body = JSON.stringify(body)
-      const res = await fetch(url, opts)
+      try {
+        const res = await fetch(url, opts)
+        const duration = ((performance.now() - t0) / 1000).toFixed(1) + 's'
+        this.apiLogs[logIdx].status = res.status
+        this.apiLogs[logIdx].duration = duration
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          this.apiLogs[logIdx].error = data.detail || `HTTP ${res.status}`
+          throw new Error(data.detail || `API error ${res.status}`)
+        }
+        return res.json()
+      } catch (e) {
+        const duration = ((performance.now() - t0) / 1000).toFixed(1) + 's'
+        if (this.apiLogs[logIdx].status === '...') {
+          this.apiLogs[logIdx].status = 'ERR'
+          this.apiLogs[logIdx].duration = duration
+          this.apiLogs[logIdx].error = e.message
+        }
+        throw e
+      }
+    },
+
+    async apiSSE(url, onItem) {
+      // POST to an SSE endpoint, call onItem(data) for each 'item' event as it arrives
+      const ts = new Date().toLocaleTimeString()
+      this.apiLogs.push({ ts, method: 'POST', url, body: 'SSE stream', status: '...', duration: '' })
+      const logIdx = this.apiLogs.length - 1
+      const t0 = performance.now()
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' } })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
+        this.apiLogs[logIdx].status = res.status
+        this.apiLogs[logIdx].duration = ((performance.now() - t0) / 1000).toFixed(1) + 's'
         throw new Error(data.detail || `API error ${res.status}`)
       }
-      return res.json()
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let itemCount = 0
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        // Parse SSE events from buffer
+        const lines = buffer.split('\n')
+        buffer = lines.pop() // keep incomplete last line
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          try {
+            const data = JSON.parse(line.slice(6))
+            if (data.type === 'item') {
+              itemCount++
+              onItem(data)
+            } else if (data.type === 'error') {
+              this.error = data.message
+            }
+          } catch {}
+        }
+      }
+      const duration = ((performance.now() - t0) / 1000).toFixed(1) + 's'
+      this.apiLogs[logIdx].status = 200
+      this.apiLogs[logIdx].duration = duration
+      return itemCount
     },
 
     truncate(s, n) {
@@ -792,7 +995,7 @@ createApp({
         if (this.selectedConceptIndices.length === 0) return false
         for (const ci of this.selectedConceptIndices) {
           const cb = this.branches[ci]
-          if (!cb || !cb.selectedDirectionIndices || cb.selectedDirectionIndices.length === 0) return false
+          if (!cb || cb.selectedDirectionIndices === null || cb.selectedDirectionIndices === undefined) return false
         }
         return true
       }
@@ -800,10 +1003,10 @@ createApp({
         if (!this.isStepDone(2)) return false
         for (const ci of this.selectedConceptIndices) {
           const cb = this.branches[ci]
-          if (!cb || !cb.selectedDirectionIndices) return false
+          if (!cb || cb.selectedDirectionIndices === null) return false
           for (const di of cb.selectedDirectionIndices) {
             const db = cb.directionBranches?.[di]
-            if (!db || !db.selectedScriptIndices || db.selectedScriptIndices.length === 0) return false
+            if (!db || db.selectedScriptIndices === null || db.selectedScriptIndices === undefined) return false
           }
         }
         return true
@@ -989,19 +1192,28 @@ createApp({
 
     async genAllDirections() {
       this.loading = true
-      this.loadingMsg = '正在为所有理念生成方向...'
+      this.loadingMsg = '正在为所有理念生成方向... (0 完成)'
       this.error = null
+      let done = 0
       try {
-        const promises = this.selectedConceptIndices.map(async ci => {
-          const data = await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/directions`)
-          if (!this.branches[ci]) this.branches[ci] = {}
-          this.branches[ci].directions = data.directions
-          this.branches[ci].selectedDirectionIndices = null
-          this.branches[ci].directionBranches = {}
-        })
-        await Promise.all(promises)
+        await this.apiSSE(
+          `/api/campaigns/${this.campaignId}/directions/generate_all`,
+          (item) => {
+            const ci = item.concept_index
+            if (!this.branches[ci]) this.branches[ci] = {}
+            this.branches[ci].directions = item.directions
+            this.branches[ci].selectedDirectionIndices = null
+            this.branches[ci].directionBranches = {}
+            done++
+            this.loadingMsg = `正在为所有理念生成方向... (${done}/${this.selectedConceptIndices.length} 完成)`
+            // Show first result immediately
+            if (done === 1) {
+              this.activeStep = 2
+              this.activeConceptTab = ci
+            }
+          }
+        )
         this.activeStep = 2
-        this.activeConceptTab = this.selectedConceptIndices[0]
       } catch (e) {
         this.error = e.message
       } finally {
@@ -1009,40 +1221,37 @@ createApp({
       }
     },
 
-    async confirmDirectionSelect() {
-      const ci = this.activeConceptTab
-      const selected = this.tempDirSelects[ci] || []
-      if (selected.length === 0) return
-      try {
-        await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/directions/select`, { indices: selected })
-        this.branches[ci].selectedDirectionIndices = [...selected]
-        // Init direction branches
-        for (const di of selected) {
-          if (!this.branches[ci].directionBranches) this.branches[ci].directionBranches = {}
-          this.branches[ci].directionBranches[di] = { scripts: null, selectedScriptIndices: null, scriptBranches: {} }
-        }
-        delete this.tempDirSelects[ci]
-        this.tempDirSelects = { ...this.tempDirSelects }
+    async confirmAllDirectionSelects() {
+      const total = this.totalTempDirections
+      if (total === 0) return
 
-        // Check if all concept branches have directions selected
-        const allDone = this.selectedConceptIndices.every(ci2 => {
-          const cb = this.branches[ci2]
-          return cb && cb.selectedDirectionIndices && cb.selectedDirectionIndices.length > 0
-        })
-
-        if (allDone) {
-          // Auto-generate scripts for all paths
-          const totalTasks = this.selectedConceptIndices.reduce((sum, ci2) => sum + (this.branches[ci2].selectedDirectionIndices?.length || 0), 0)
-          this.confirmModalMsg = `已选定方向，将为 ${totalTasks} 条路径分别生成脚本。`
-          this.confirmTaskCount = totalTasks
-          this.confirmedAction = async () => {
-            await this.genAllScripts()
+      this.confirmModalMsg = `已选定 ${total} 个方向，将为每个方向分别生成脚本。`
+      this.confirmTaskCount = total
+      this.confirmedAction = async () => {
+        try {
+          // Submit all direction selections to API in parallel
+          const promises = []
+          for (const ci of this.selectedConceptIndices) {
+            const selected = [...(this.tempDirSelects[ci] || [])]
+            promises.push(
+              this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/directions/select`, { indices: selected })
+                .then(() => {
+                  this.branches[ci].selectedDirectionIndices = [...selected]
+                  if (!this.branches[ci].directionBranches) this.branches[ci].directionBranches = {}
+                  for (const di of selected) {
+                    this.branches[ci].directionBranches[di] = { scripts: null, selectedScriptIndices: null, scriptBranches: {} }
+                  }
+                })
+            )
           }
-          this.showConfirmModal = true
+          await Promise.all(promises)
+          this.tempDirSelects = {}
+          await this.genAllScripts()
+        } catch (e) {
+          this.error = e.message
         }
-      } catch (e) {
-        this.error = e.message
       }
+      this.showConfirmModal = true
     },
 
     // ── Script generation ──
@@ -1074,28 +1283,34 @@ createApp({
 
     async genAllScripts() {
       this.loading = true
-      this.loadingMsg = '正在为所有路径生成脚本...'
+      this.loadingMsg = '正在为所有路径生成脚本... (0 完成)'
       this.error = null
+      let done = 0, total = 0
+      // Count total tasks
+      for (const ci of this.selectedConceptIndices) {
+        total += (this.branches[ci]?.selectedDirectionIndices?.length || 0)
+      }
       try {
-        const promises = []
-        for (const ci of this.selectedConceptIndices) {
-          const cb = this.branches[ci]
-          for (const di of (cb.selectedDirectionIndices || [])) {
-            promises.push((async () => {
-              const data = await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/scripts`)
-              if (!cb.directionBranches) cb.directionBranches = {}
-              if (!cb.directionBranches[di]) cb.directionBranches[di] = {}
-              cb.directionBranches[di].scripts = data.scripts
-              cb.directionBranches[di].selectedScriptIndices = null
-              cb.directionBranches[di].scriptBranches = {}
-            })())
+        await this.apiSSE(
+          `/api/campaigns/${this.campaignId}/scripts/generate_all`,
+          (item) => {
+            const { concept_index: ci, direction_index: di } = item
+            const cb = this.branches[ci]
+            if (!cb.directionBranches) cb.directionBranches = {}
+            if (!cb.directionBranches[di]) cb.directionBranches[di] = {}
+            cb.directionBranches[di].scripts = item.scripts
+            cb.directionBranches[di].selectedScriptIndices = null
+            cb.directionBranches[di].scriptBranches = {}
+            done++
+            this.loadingMsg = `正在为所有路径生成脚本... (${done}/${total} 完成)`
+            if (done === 1) {
+              this.activeStep = 3
+              this.activeConceptTab = ci
+              this.activeDirectionTab = di
+            }
           }
-        }
-        await Promise.all(promises)
+        )
         this.activeStep = 3
-        this.activeConceptTab = this.selectedConceptIndices[0]
-        const cb = this.branches[this.activeConceptTab]
-        this.activeDirectionTab = cb.selectedDirectionIndices?.[0] ?? null
       } catch (e) {
         this.error = e.message
       } finally {
@@ -1103,32 +1318,56 @@ createApp({
       }
     },
 
-    async confirmScriptSelect() {
-      const ci = this.activeConceptTab
-      const di = this.activeDirectionTab
-      const key = `${ci}_${di}`
-      const selected = this.tempScriptSelects[key] || []
-      if (selected.length === 0) return
-      const db = this.branches[ci].directionBranches[di]
-      try {
-        await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/scripts/select`, { indices: selected })
-        db.selectedScriptIndices = [...selected]
-        // Init script branches
-        if (!db.scriptBranches) db.scriptBranches = {}
-        for (const si of selected) {
-          db.scriptBranches[si] = { confirmed_style: '', images: null, generating: false, genError: null }
-        }
-        delete this.tempScriptSelects[key]
-        this.tempScriptSelects = { ...this.tempScriptSelects }
+    async confirmAllScriptSelects() {
+      // Commit all script selections across all direction tabs at once
+      const total = this.totalTempScripts
+      if (total === 0) return
 
-        // If all paths have scripts selected, move to image step
-        if (this.isStepDone(3)) {
+      this.confirmModalMsg = `已选定 ${total} 套${this.isGraphicPlatform ? '图文方案' : '脚本'}，将进入图片生成阶段。`
+      this.confirmTaskCount = total
+      this.confirmedAction = async () => {
+        try {
+          // Submit all selections to API in parallel
+          const promises = []
+          for (const ci of this.selectedConceptIndices) {
+            const cb = this.branches[ci]
+            if (!cb) continue
+            for (const di of (cb.selectedDirectionIndices || [])) {
+              const key = `${ci}_${di}`
+              const selected = [...(this.tempScriptSelects[key] || [])]
+              const db = cb.directionBranches[di]
+              promises.push(
+                this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/scripts/select`, { indices: selected })
+                  .then(() => {
+                    db.selectedScriptIndices = [...selected]
+                    if (!db.scriptBranches) db.scriptBranches = {}
+                    for (const si of selected) {
+                      db.scriptBranches[si] = { confirmed_style: '', images: null, generating: false, genError: null }
+                    }
+                  })
+              )
+            }
+          }
+          await Promise.all(promises)
+          this.tempScriptSelects = {}
           this.activeStep = 4
-          this.activeScriptTab = db.selectedScriptIndices[0]
+          // Set active tab to first non-skipped branch
+          for (const ci of this.selectedConceptIndices) {
+            for (const di of (this.branches[ci]?.selectedDirectionIndices || [])) {
+              const indices = this.branches[ci].directionBranches?.[di]?.selectedScriptIndices || []
+              if (indices.length > 0) {
+                this.activeConceptTab = ci
+                this.activeDirectionTab = di
+                this.activeScriptTab = indices[0]
+                return
+              }
+            }
+          }
+        } catch (e) {
+          this.error = e.message
         }
-      } catch (e) {
-        this.error = e.message
       }
+      this.showConfirmModal = true
     },
 
     switchConceptTab(ci) {
@@ -1183,6 +1422,71 @@ createApp({
           })
       } catch (e) {
         this.error = e.message
+      }
+    },
+
+    async batchGenerateAllImages() {
+      // Set default style for all branches that don't have one, then generate all at once
+      this.batchImageGenerating = true
+      this.error = null
+      try {
+        // Confirm style for pending branches
+        const stylePromises = []
+        for (const ci of this.selectedConceptIndices) {
+          const cb = this.branches[ci]
+          if (!cb) continue
+          for (const di of (cb.selectedDirectionIndices || [])) {
+            const db = cb.directionBranches?.[di]
+            if (!db) continue
+            for (const si of (db.selectedScriptIndices || [])) {
+              const sb = db.scriptBranches?.[si]
+              if (sb && !sb.images && !sb.generating) {
+                if (!sb.confirmed_style) {
+                  const defaultStyle = db.scripts?.[si]?.visual_style || '写实摄影风'
+                  stylePromises.push(
+                    this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/${si}/style`, { style: defaultStyle })
+                      .then(() => { sb.confirmed_style = defaultStyle })
+                  )
+                }
+                sb.generating = true
+              }
+            }
+          }
+        }
+        this.branches = { ...this.branches }
+        await Promise.all(stylePromises)
+
+        // Generate all images via SSE — each branch streams in as it completes
+        await this.apiSSE(
+          `/api/campaigns/${this.campaignId}/images/generate_all`,
+          (item) => {
+            const { concept_index: ci, direction_index: di, script_index: si, images } = item
+            const sb = this.branches[ci]?.directionBranches?.[di]?.scriptBranches?.[si]
+            if (sb) {
+              sb.images = images
+              sb.generating = false
+              this.branches = { ...this.branches }
+            }
+          }
+        )
+      } catch (e) {
+        this.error = e.message
+        // Reset generating flags
+        for (const ci of this.selectedConceptIndices) {
+          const cb = this.branches[ci]
+          if (!cb) continue
+          for (const di of (cb.selectedDirectionIndices || [])) {
+            const db = cb.directionBranches?.[di]
+            if (!db) continue
+            for (const si of (db.selectedScriptIndices || [])) {
+              const sb = db.scriptBranches?.[si]
+              if (sb && sb.generating && !sb.images) sb.generating = false
+            }
+          }
+        }
+      } finally {
+        this.batchImageGenerating = false
+        this.branches = { ...this.branches }
       }
     },
 

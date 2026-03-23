@@ -1,8 +1,41 @@
 import hashlib
 import os
+import re
 from models.brand import BrandKB
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
+
+# Sections of knowledge base relevant to script/image generation
+# (product appearance, brand identity, target audience, visual assets)
+_SCRIPT_RELEVANT_HEADINGS = {
+    "品牌概述", "产品信息", "基本信息", "产品规格",
+    "品牌核心传播概念", "沟通概念", "人群洞察", "品牌定位",
+    "差异化优势", "信任支撑",
+    "目标人群", "品牌视觉资产",
+}
+
+
+def extract_script_kb(raw_md: str) -> str:
+    """Extract only the sections of brand KB relevant to script generation.
+
+    Keeps: brand overview, product info, positioning, target audience, visual assets.
+    Drops: clinical data, competitor analysis, market data, history, detailed mechanisms.
+    """
+    lines = raw_md.split("\n")
+    result = []
+    include = True  # include content before the first heading (brand name etc.)
+
+    for line in lines:
+        heading_match = re.match(r"^(#{1,3})\s+(.+)", line)
+        if heading_match:
+            heading_text = heading_match.group(2).strip()
+            # Check if this heading or any relevant heading is a substring match
+            include = any(h in heading_text or heading_text in h for h in _SCRIPT_RELEVANT_HEADINGS)
+        if include:
+            result.append(line)
+
+    extracted = "\n".join(result).strip()
+    return extracted if extracted else raw_md  # fallback to full KB if extraction yields nothing
 
 
 class BrandKBReader:
