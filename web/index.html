@@ -33,6 +33,42 @@
     .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
     /* Modal backdrop */
     .modal-backdrop { background: rgba(0,0,0,.4); backdrop-filter: blur(2px); }
+
+    /* ── Mind-map tree ── */
+    .mindmap { position: relative; padding: 40px 32px; min-width: max-content; }
+    .mindmap-level { display: flex; flex-direction: column; gap: 6px; position: relative; }
+    .mindmap-branch { display: flex; align-items: flex-start; gap: 0; }
+    .mindmap-node {
+      position: relative; padding: 8px 14px; border-radius: 10px; border: 1.5px solid #2d3348;
+      background: #1c1f2e; cursor: pointer; transition: all .2s; white-space: nowrap;
+      display: flex; align-items: center; gap: 8px; min-width: 120px; max-width: 260px;
+      z-index: 2;
+    }
+    .mindmap-node:hover { border-color: #6366f1; transform: scale(1.03); box-shadow: 0 4px 20px rgba(99,102,241,.15); }
+    .mindmap-node.st-selected { border-color: #22c55e; background: #0d2818; }
+    .mindmap-node.st-selected .mn-dot { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+    .mindmap-node.st-generated { border-color: #3b82f6; background: #0f1a2e; }
+    .mindmap-node.st-generated .mn-dot { background: #3b82f6; }
+    .mindmap-node.st-rejected { border-color: #444; background: #1a1a1a; opacity: .45; }
+    .mindmap-node.st-rejected .mn-dot { background: #666; }
+    .mindmap-node.on-path { box-shadow: 0 0 0 2px rgba(250,204,21,.25), 0 0 12px rgba(250,204,21,.1); }
+    .mn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #3b82f6; transition: all .2s; }
+    .mn-icon { font-size: 13px; flex-shrink: 0; opacity: .7; }
+    .mn-body { overflow: hidden; }
+    .mn-type { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: #888; line-height: 1; }
+    .mn-title { font-size: 12px; color: #e0e0e0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
+    .mindmap-children { display: flex; flex-direction: column; gap: 6px; margin-left: 0; padding-left: 0; position: relative; }
+    /* SVG connector container */
+    .mindmap-connector { position: relative; width: 48px; flex-shrink: 0; min-height: 32px; }
+    .mindmap-connector svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
+    .mindmap-connector path { fill: none; stroke: #2d3348; stroke-width: 1.5; }
+    .mindmap-connector path.path-active { stroke: #facc15; stroke-width: 2; }
+    /* Detail panel in tree */
+    .tree-detail { background: #151825; border: 1px solid #2d3348; border-radius: 12px; padding: 20px; }
+    .tree-detail h4 { color: #fff; font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .tree-detail .td-label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #666; margin-bottom: 4px; margin-top: 12px; }
+    .tree-detail .td-value { font-size: 13px; color: #bbb; line-height: 1.6; }
+    .tree-detail .td-scene { background: #0f1117; border-radius: 8px; padding: 10px; margin-top: 6px; border-left: 3px solid #2d3348; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -755,48 +791,158 @@
     </div>
   </div>
 
-  <!-- ==================== TREE PANEL ==================== -->
-  <div v-if="showTreePanel && treeData" class="fixed inset-y-0 right-0 w-[480px] bg-slate-900 z-50 shadow-2xl overflow-y-auto">
-    <div class="p-5">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-white font-bold text-base">创意树</h3>
-        <button @click="showTreePanel = false" class="text-slate-400 hover:text-white text-xl">&times;</button>
+  <!-- ==================== TREE PANEL (Mind-map) ==================== -->
+  <div v-if="showTreePanel && treeData" class="fixed inset-0 z-50 bg-[#0f1117] flex flex-col">
+    <!-- Top bar -->
+    <div class="h-12 bg-[#1a1d27] border-b border-[#2d3348] flex items-center px-5 shrink-0">
+      <h3 class="text-white font-bold text-sm">创意树</h3>
+      <span class="ml-3 text-xs text-slate-500">{{ treeData.campaign_id }}</span>
+      <div class="ml-6 flex items-center gap-4 text-[11px] text-slate-400">
+        <span><span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1 align-middle"></span>已选</span>
+        <span><span class="inline-block w-2 h-2 rounded-full bg-blue-400 mr-1 align-middle"></span>已生成</span>
+        <span><span class="inline-block w-2 h-2 rounded-full bg-slate-500 mr-1 align-middle"></span>未选</span>
       </div>
-      <div class="text-xs text-slate-400 mb-4">
-        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1"></span>已选
-        <span class="inline-block w-2 h-2 rounded-full bg-blue-400 mr-1 ml-3"></span>已生成
-        <span class="inline-block w-2 h-2 rounded-full bg-slate-500 mr-1 ml-3"></span>已拒绝
-      </div>
-      <div v-if="treeData.nodes" class="space-y-1">
-        <template v-for="childId in (treeData.nodes[treeData.root_id]?.children || [])" :key="childId">
-          <div class="ml-0">
-            <div :class="treeNodeClass(treeData.nodes[childId])" :title="treeData.nodes[childId].node_id">
-              <span class="font-medium">{{ getTreeNodeTitle(treeData.nodes[childId]) }}</span>
-              <span class="text-[10px] opacity-60">{{ treeData.nodes[childId].node_id }}</span>
+      <button @click="showTreePanel = false" class="ml-auto text-slate-400 hover:text-white text-lg px-2">&times;</button>
+    </div>
+    <!-- Content: tree + detail -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Mind-map canvas -->
+      <div class="flex-1 overflow-auto p-6" id="mindmap-scroll">
+        <div class="mindmap" v-if="treeData.nodes">
+          <!-- Root node + children -->
+          <div class="mindmap-branch">
+            <div class="mindmap-node st-selected on-path" @click="treeSelectNode(treeData.root_id)">
+              <span class="mn-dot"></span>
+              <div class="mn-body">
+                <div class="mn-type">起点</div>
+                <div class="mn-title">{{ getTreeNodeTitle(treeData.nodes[treeData.root_id]) }}</div>
+              </div>
             </div>
-            <template v-for="dId in (treeData.nodes[childId]?.children || [])" :key="dId">
-              <div class="ml-5">
-                <div :class="treeNodeClass(treeData.nodes[dId])">
-                  <span class="font-medium">{{ getTreeNodeTitle(treeData.nodes[dId]) }}</span>
+            <div class="mindmap-connector" v-if="treeData.nodes[treeData.root_id]?.children?.length" :style="{minHeight: treeChildrenHeight(treeData.root_id) + 'px'}">
+              <svg><path v-for="(_, i) in treeData.nodes[treeData.root_id].children" :key="i" :d="connectorPath(treeData.root_id, i)" :class="{
+                'path-active': isOnActivePath(treeData.nodes[treeData.root_id].children[i])
+              }"/></svg>
+            </div>
+            <div class="mindmap-children">
+              <!-- Concept nodes -->
+              <div v-for="cId in treeData.nodes[treeData.root_id]?.children || []" :key="cId" class="mindmap-branch" :ref="'tn_'+cId">
+                <div :class="'mindmap-node ' + treeNodeStatusClass(cId)" @click="treeSelectNode(cId)">
+                  <span class="mn-dot"></span>
+                  <div class="mn-body">
+                    <div class="mn-type">{{ treeData.nodes[cId].node_type === 'concept' ? '概念' : '节点' }}</div>
+                    <div class="mn-title">{{ getTreeNodeTitle(treeData.nodes[cId]) }}</div>
+                  </div>
                 </div>
-                <template v-for="sId in (treeData.nodes[dId]?.children || [])" :key="sId">
-                  <div class="ml-5">
-                    <div :class="treeNodeClass(treeData.nodes[sId])">
-                      <span class="font-medium">{{ getTreeNodeTitle(treeData.nodes[sId]) }}</span>
+                <div class="mindmap-connector" v-if="treeData.nodes[cId]?.children?.length" :style="{minHeight: treeChildrenHeight(cId) + 'px'}">
+                  <svg><path v-for="(_, i) in treeData.nodes[cId].children" :key="i" :d="connectorPath(cId, i)" :class="{
+                    'path-active': isOnActivePath(treeData.nodes[cId].children[i])
+                  }"/></svg>
+                </div>
+                <div class="mindmap-children" v-if="treeData.nodes[cId]?.children?.length">
+                  <!-- Direction nodes -->
+                  <div v-for="dId in treeData.nodes[cId].children" :key="dId" class="mindmap-branch" :ref="'tn_'+dId">
+                    <div :class="'mindmap-node ' + treeNodeStatusClass(dId)" @click="treeSelectNode(dId)">
+                      <span class="mn-dot"></span>
+                      <div class="mn-body">
+                        <div class="mn-type">{{ treeData.nodes[dId].node_type === 'direction' ? '方向' : '节点' }}</div>
+                        <div class="mn-title">{{ getTreeNodeTitle(treeData.nodes[dId]) }}</div>
+                      </div>
                     </div>
-                    <template v-for="iId in (treeData.nodes[sId]?.children || [])" :key="iId">
-                      <div class="ml-5">
-                        <div :class="treeNodeClass(treeData.nodes[iId])">
-                          <span class="font-medium">{{ getTreeNodeTitle(treeData.nodes[iId]) }}</span>
+                    <div class="mindmap-connector" v-if="treeData.nodes[dId]?.children?.length" :style="{minHeight: treeChildrenHeight(dId) + 'px'}">
+                      <svg><path v-for="(_, i) in treeData.nodes[dId].children" :key="i" :d="connectorPath(dId, i)" :class="{
+                        'path-active': isOnActivePath(treeData.nodes[dId].children[i])
+                      }"/></svg>
+                    </div>
+                    <div class="mindmap-children" v-if="treeData.nodes[dId]?.children?.length">
+                      <!-- Script nodes -->
+                      <div v-for="sId in treeData.nodes[dId].children" :key="sId" class="mindmap-branch" :ref="'tn_'+sId">
+                        <div :class="'mindmap-node ' + treeNodeStatusClass(sId)" @click="treeSelectNode(sId)">
+                          <span class="mn-dot"></span>
+                          <div class="mn-body">
+                            <div class="mn-type">{{ treeData.nodes[sId].node_type === 'script' ? '脚本' : '节点' }}</div>
+                            <div class="mn-title">{{ getTreeNodeTitle(treeData.nodes[sId]) }}</div>
+                          </div>
+                        </div>
+                        <div class="mindmap-connector" v-if="treeData.nodes[sId]?.children?.length" :style="{minHeight: treeChildrenHeight(sId) + 'px'}">
+                          <svg><path v-for="(_, i) in treeData.nodes[sId].children" :key="i" :d="connectorPath(sId, i)" :class="{
+                            'path-active': isOnActivePath(treeData.nodes[sId].children[i])
+                          }"/></svg>
+                        </div>
+                        <div class="mindmap-children" v-if="treeData.nodes[sId]?.children?.length">
+                          <!-- Image nodes -->
+                          <div v-for="iId in treeData.nodes[sId].children" :key="iId" class="mindmap-branch" :ref="'tn_'+iId">
+                            <div :class="'mindmap-node ' + treeNodeStatusClass(iId)" @click="treeSelectNode(iId)">
+                              <span class="mn-dot"></span>
+                              <div class="mn-body">
+                                <div class="mn-type">图片</div>
+                                <div class="mn-title">{{ getTreeNodeTitle(treeData.nodes[iId]) }}</div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </template>
+                    </div>
                   </div>
-                </template>
+                </div>
               </div>
-            </template>
+            </div>
           </div>
-        </template>
+        </div>
+      </div>
+      <!-- Detail panel (right side) -->
+      <div v-if="treeSelectedNode" class="w-[360px] shrink-0 bg-[#1a1d27] border-l border-[#2d3348] overflow-y-auto p-5">
+        <div class="tree-detail">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
+              :class="treeSelectedNode.status === 'selected' ? 'bg-emerald-900/50 text-emerald-400' : treeSelectedNode.status === 'generated' ? 'bg-blue-900/50 text-blue-400' : 'bg-slate-700 text-slate-400'">
+              {{ treeSelectedNode.status }}
+            </span>
+            <span class="text-[10px] text-slate-500 font-mono">{{ treeSelectedNode.node_id }}</span>
+          </div>
+          <h4>{{ getTreeNodeTitle(treeSelectedNode) }}</h4>
+
+          <!-- Concept detail -->
+          <template v-if="treeSelectedNode.node_type === 'concept'">
+            <div class="td-label">描述</div>
+            <div class="td-value">{{ treeSelectedNode.data.description }}</div>
+            <div class="td-label">推导依据</div>
+            <div class="td-value">{{ treeSelectedNode.data.rationale }}</div>
+          </template>
+          <!-- Direction detail -->
+          <template v-else-if="treeSelectedNode.node_type === 'direction'">
+            <div class="td-label">描述</div>
+            <div class="td-value">{{ treeSelectedNode.data.description }}</div>
+            <div class="td-label">平台适配</div>
+            <div class="td-value">{{ treeSelectedNode.data.platform_notes }}</div>
+          </template>
+          <!-- Script detail -->
+          <template v-else-if="treeSelectedNode.node_type === 'script'">
+            <div class="td-label">大纲</div>
+            <div class="td-value">{{ treeSelectedNode.data.outline }}</div>
+            <div class="td-label">视觉风格</div>
+            <div class="td-value">{{ treeSelectedNode.data.visual_style || '未指定' }}</div>
+          </template>
+          <!-- Images detail -->
+          <template v-else-if="treeSelectedNode.node_type === 'images'">
+            <div class="td-label">视觉风格</div>
+            <div class="td-value">{{ treeSelectedNode.data.visual_style || '未指定' }}</div>
+            <div class="td-label">图片 ({{ (treeSelectedNode.data.images||[]).length }})</div>
+            <div class="flex flex-wrap gap-2 mt-2">
+              <img v-for="img in (treeSelectedNode.data.images||[])" :key="img.scene_no"
+                :src="img.image_path" class="w-24 h-16 object-cover rounded border border-[#2d3348]"
+                onerror="this.style.display='none'">
+            </div>
+          </template>
+          <!-- Root detail -->
+          <template v-else-if="treeSelectedNode.node_type === 'root'">
+            <div class="td-label">品牌</div>
+            <div class="td-value">{{ treeSelectedNode.data.brand_name }}</div>
+            <div class="td-label">目标</div>
+            <div class="td-value">{{ treeSelectedNode.data.objective }}</div>
+            <div class="td-label">平台</div>
+            <div class="td-value">{{ treeSelectedNode.data.platform }}</div>
+          </template>
+        </div>
       </div>
     </div>
   </div>
@@ -897,6 +1043,7 @@ createApp({
       // Tree panel
       showTreePanel: false,
       treeData: null,
+      treeSelectedId: null,
     }
   },
 
@@ -908,6 +1055,10 @@ createApp({
       let r = ''
       if (this.selectedDims.length > 0) r = '需改进维度: ' + this.selectedDims.join(', ') + '。'
       return r + this.feedbackDetail
+    },
+    treeSelectedNode() {
+      if (!this.treeSelectedId || !this.treeData?.nodes) return null
+      return this.treeData.nodes[this.treeSelectedId] || null
     },
     isGraphicPlatform() {
       return ['小红书'].includes(this.form.platform)
@@ -1146,8 +1297,9 @@ createApp({
       }
     },
 
-    // ── Tree panel ──
+    // ── Tree panel (mind-map) ──
     async loadTree() {
+      this.treeSelectedId = null
       try {
         this.treeData = await this.api('GET', `/api/campaigns/${this.campaignId}/tree`)
         this.showTreePanel = true
@@ -1156,16 +1308,43 @@ createApp({
       }
     },
     getTreeNodeTitle(node) {
+      if (!node) return ''
       const d = node.data || {}
       if (node.node_type === 'root') return (d.brand_name || '') + ' / ' + (d.platform || '')
       if (node.node_type === 'images') return (d.images || []).length + '张图片'
       return d.title || d.outline || d.id || node.node_id
     },
-    treeNodeClass(node) {
-      const base = 'px-3 py-1.5 rounded-lg border text-xs cursor-pointer inline-flex items-center gap-1.5 mb-1 transition '
-      if (node.status === 'selected') return base + 'border-emerald-400 bg-emerald-50 text-emerald-700'
-      if (node.status === 'rejected') return base + 'border-slate-300 bg-slate-50 text-slate-400 line-through'
-      return base + 'border-blue-300 bg-blue-50 text-blue-700'
+    treeNodeStatusClass(nodeId) {
+      const node = this.treeData?.nodes?.[nodeId]
+      if (!node) return ''
+      let cls = 'st-' + node.status
+      if (this.isOnActivePath(nodeId)) cls += ' on-path'
+      return cls
+    },
+    isOnActivePath(nodeId) {
+      return (this.treeData?.active_path || []).includes(nodeId)
+    },
+    treeSelectNode(nodeId) {
+      this.treeSelectedId = nodeId
+    },
+    treeChildrenHeight(parentId) {
+      const node = this.treeData?.nodes?.[parentId]
+      if (!node || !node.children || node.children.length === 0) return 32
+      // Each child row ~38px (node height + gap)
+      return Math.max(32, node.children.length * 38)
+    },
+    connectorPath(parentId, childIndex) {
+      // Generate a smooth bezier curve from left-center to the child node
+      const node = this.treeData?.nodes?.[parentId]
+      if (!node) return ''
+      const total = node.children.length
+      const rowH = 38  // matches CSS gap + node height
+      const totalH = total * rowH
+      const startY = totalH / 2  // middle of all children
+      const endY = childIndex * rowH + rowH / 2  // center of this child
+      const w = 48  // connector width
+      const cpx = w * 0.55  // bezier control point x offset
+      return `M 0,${startY} C ${cpx},${startY} ${w - cpx},${endY} ${w},${endY}`
     },
 
     // ── API helpers ──
