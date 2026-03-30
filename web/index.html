@@ -73,6 +73,22 @@
           </button>
           <p v-if="error" class="text-red-500 text-sm text-center">{{ error }}</p>
         </div>
+        <!-- Resume existing campaigns -->
+        <div v-if="existingCampaigns.length > 0" class="mt-6 border-t border-slate-200 pt-5">
+          <h3 class="text-sm font-medium text-slate-500 mb-3">继续已有项目</h3>
+          <div class="space-y-2 max-h-56 overflow-y-auto">
+            <div v-for="c in existingCampaigns" :key="c.campaign_id"
+              class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-indigo-300 transition cursor-pointer"
+              @click="loadCampaign(c.campaign_id)">
+              <div class="min-w-0">
+                <span class="text-sm font-medium text-slate-800">{{ c.brand_name }}</span>
+                <span class="text-xs text-slate-400 ml-2">{{ c.platform }}</span>
+                <p class="text-xs text-slate-500 mt-0.5 truncate">{{ c.objective }}</p>
+              </div>
+              <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full shrink-0 ml-3">{{ c.step_label }}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -84,7 +100,8 @@
     <header class="h-14 bg-white border-b border-slate-200 flex items-center px-6 shrink-0">
       <h1 class="text-base font-semibold text-slate-800">AIGC 创意工作流</h1>
       <span class="ml-3 text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-medium">{{ campaignId }}</span>
-      <span class="ml-auto text-sm text-slate-500">{{ brandName }} · {{ form.platform }}</span>
+      <button @click="loadTree" class="ml-auto mr-3 px-3 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition">创意树</button>
+      <span class="text-sm text-slate-500">{{ brandName }} · {{ form.platform }}</span>
     </header>
 
     <div class="flex flex-1 overflow-hidden">
@@ -225,6 +242,9 @@
                 :class="tempMultiSelect.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-slate-300 cursor-not-allowed'">
                 确认选择 {{ tempMultiSelect.length }} 个理念
               </button>
+              <button v-if="tempMultiSelect.length >= 2" @click="openMergeModal('concept')" class="px-4 py-2.5 rounded-lg text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition">
+                混合 {{ tempMultiSelect.length }} 个方案
+              </button>
               <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">
                 重新生成...
               </button>
@@ -235,8 +255,13 @@
               </button>
             </div>
             <div v-if="showFeedback && selectedConceptIndices.length === 0" class="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <textarea v-model="feedback" rows="2" placeholder="输入修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
-              <button @click="doGenerate('concepts', feedback)" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">
+              <div class="flex flex-wrap gap-1.5 mb-3">
+                <button v-for="dim in feedbackDims" :key="dim" @click="toggleDim(dim)"
+                  class="px-2.5 py-1 text-xs rounded-full border transition"
+                  :class="selectedDims.includes(dim) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-300'">{{ dim }}</button>
+              </div>
+              <textarea v-model="feedbackDetail" rows="2" placeholder="具体修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+              <button @click="doGenerate('concepts', structuredFeedback); clearFeedback()" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">
                 重新生成
               </button>
             </div>
@@ -285,10 +310,16 @@
                   未选择（将跳过该理念）
                 </span>
                 <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成...</button>
+                <button v-if="tempDirSelect.length >= 2" @click="openMergeModal('direction')" class="text-sm text-amber-600 hover:text-amber-700 font-medium transition">混合方案</button>
               </div>
               <div v-if="showFeedback" class="mt-3 bg-slate-50 rounded-xl p-4 border border-slate-200">
-                <textarea v-model="feedback" rows="2" placeholder="输入修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
-                <button @click="genDirections(activeConceptTab, feedback)" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成</button>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                  <button v-for="dim in feedbackDims" :key="dim" @click="toggleDim(dim)"
+                    class="px-2.5 py-1 text-xs rounded-full border transition"
+                    :class="selectedDims.includes(dim) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-300'">{{ dim }}</button>
+                </div>
+                <textarea v-model="feedbackDetail" rows="2" placeholder="具体修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                <button @click="genDirections(activeConceptTab, structuredFeedback); clearFeedback()" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成</button>
               </div>
             </div>
             <div v-else-if="!loading" class="text-center py-12">
@@ -392,10 +423,16 @@
                   未选择（将跳过该方向）
                 </span>
                 <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成...</button>
+                <button v-if="tempScriptSelect.length >= 2" @click="openMergeModal('script')" class="text-sm text-amber-600 hover:text-amber-700 font-medium transition">混合方案</button>
               </div>
               <div v-if="showFeedback" class="mt-3 bg-slate-50 rounded-xl p-4 border border-slate-200">
-                <textarea v-model="feedback" rows="2" placeholder="输入修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
-                <button @click="genScripts(activeConceptTab, activeDirectionTab, feedback)" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成</button>
+                <div class="flex flex-wrap gap-1.5 mb-3">
+                  <button v-for="dim in feedbackDims" :key="dim" @click="toggleDim(dim)"
+                    class="px-2.5 py-1 text-xs rounded-full border transition"
+                    :class="selectedDims.includes(dim) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-300'">{{ dim }}</button>
+                </div>
+                <textarea v-model="feedbackDetail" rows="2" placeholder="具体修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                <button @click="genScripts(activeConceptTab, activeDirectionTab, structuredFeedback); clearFeedback()" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成</button>
               </div>
             </div>
             <div v-else-if="!loading" class="text-center py-12">
@@ -696,6 +733,74 @@
     </div>
   </div>
 
+  <!-- ==================== MERGE MODAL ==================== -->
+  <div v-if="showMergeModal" class="fixed inset-0 z-50 flex items-center justify-center modal-backdrop" @click.self="showMergeModal = false">
+    <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md fade-in">
+      <h3 class="text-lg font-bold mb-3">混合方案</h3>
+      <p class="text-sm text-slate-500 mb-3">已选 {{ mergeIndices.length }} 个方案进行融合</p>
+      <div class="bg-slate-50 rounded-lg p-3 mb-4 space-y-1.5 max-h-32 overflow-y-auto text-xs text-slate-600">
+        <div v-for="idx in mergeIndices" :key="idx">
+          <template v-if="mergeLevel === 'concept'">方案{{ idx+1 }}: {{ concepts[idx]?.title }}</template>
+          <template v-else-if="mergeLevel === 'direction' && branches[activeConceptTab]">方案{{ idx+1 }}: {{ branches[activeConceptTab]?.directions?.[idx]?.title }}</template>
+          <template v-else-if="mergeLevel === 'script'">方案{{ idx+1 }}</template>
+        </div>
+      </div>
+      <textarea v-model="mergeInstruction" rows="2" placeholder="混合指令（如：用方案1的调性+方案3的视觉）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-amber-500 resize-none mb-4"></textarea>
+      <div class="flex justify-end gap-3">
+        <button @click="showMergeModal = false" class="px-4 py-2 text-sm text-slate-600 hover:text-slate-800">取消</button>
+        <button @click="executeMerge" class="px-5 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition">
+          确认混合并重新生成
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== TREE PANEL ==================== -->
+  <div v-if="showTreePanel && treeData" class="fixed inset-y-0 right-0 w-[480px] bg-slate-900 z-50 shadow-2xl overflow-y-auto">
+    <div class="p-5">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-white font-bold text-base">创意树</h3>
+        <button @click="showTreePanel = false" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+      <div class="text-xs text-slate-400 mb-4">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1"></span>已选
+        <span class="inline-block w-2 h-2 rounded-full bg-blue-400 mr-1 ml-3"></span>已生成
+        <span class="inline-block w-2 h-2 rounded-full bg-slate-500 mr-1 ml-3"></span>已拒绝
+      </div>
+      <div v-if="treeData.nodes" class="space-y-1">
+        <template v-for="childId in (treeData.nodes[treeData.root_id]?.children || [])" :key="childId">
+          <div class="ml-0">
+            <div :class="treeNodeClass(treeData.nodes[childId])" :title="treeData.nodes[childId].node_id">
+              <span class="font-medium">{{ getTreeNodeTitle(treeData.nodes[childId]) }}</span>
+              <span class="text-[10px] opacity-60">{{ treeData.nodes[childId].node_id }}</span>
+            </div>
+            <template v-for="dId in (treeData.nodes[childId]?.children || [])" :key="dId">
+              <div class="ml-5">
+                <div :class="treeNodeClass(treeData.nodes[dId])">
+                  <span class="font-medium">{{ getTreeNodeTitle(treeData.nodes[dId]) }}</span>
+                </div>
+                <template v-for="sId in (treeData.nodes[dId]?.children || [])" :key="sId">
+                  <div class="ml-5">
+                    <div :class="treeNodeClass(treeData.nodes[sId])">
+                      <span class="font-medium">{{ getTreeNodeTitle(treeData.nodes[sId]) }}</span>
+                    </div>
+                    <template v-for="iId in (treeData.nodes[sId]?.children || [])" :key="iId">
+                      <div class="ml-5">
+                        <div :class="treeNodeClass(treeData.nodes[iId])">
+                          <span class="font-medium">{{ getTreeNodeTitle(treeData.nodes[iId]) }}</span>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
   <!-- API Logs Panel -->
   <div v-if="campaignId" class="fixed bottom-0 right-0 z-40" style="width:480px;">
     <button @click="showApiLogs = !showApiLogs"
@@ -775,13 +880,34 @@ createApp({
       summaryPlans: [],
       summaryLoading: false,
 
-      // steps is computed (platform-aware)
+      // Resume
+      existingCampaigns: [],
+
+      // Structured feedback
+      feedbackDims: ['调性/风格', '视觉表现', '受众匹配', '平台适配', '品牌一致性', '其他'],
+      selectedDims: [],
+      feedbackDetail: '',
+
+      // Merge
+      showMergeModal: false,
+      mergeLevel: '',
+      mergeIndices: [],
+      mergeInstruction: '',
+
+      // Tree panel
+      showTreePanel: false,
+      treeData: null,
     }
   },
 
   computed: {
     canCreate() {
       return this.form.brand_id && this.form.objective && this.form.platform
+    },
+    structuredFeedback() {
+      let r = ''
+      if (this.selectedDims.length > 0) r = '需改进维度: ' + this.selectedDims.join(', ') + '。'
+      return r + this.feedbackDetail
     },
     isGraphicPlatform() {
       return ['小红书'].includes(this.form.platform)
@@ -908,6 +1034,140 @@ createApp({
   },
 
   methods: {
+    // ── Resume ──
+    async loadCampaign(cid) {
+      this.loading = true
+      this.error = null
+      try {
+        const data = await this.api('GET', `/api/campaigns/${cid}/load`)
+        this.campaignId = cid
+        this.brandName = data.brand_name
+        this.insightsSources = data.insights_sources || []
+        this.platformKbLoaded = data.platform_kb_loaded
+        this.brandImagePaths = data.brand_images || []
+        this.form.platform = data.platform || ''
+        this.form.objective = data.objective || ''
+        this.form.notes = data.notes || ''
+        // Restore concepts
+        if (data.concepts) this.concepts = data.concepts
+        if (data.selected_concept_indices) {
+          this.selectedConceptIndices = data.selected_concept_indices
+          this.activeConceptTab = data.selected_concept_indices[0]
+        }
+        // Restore branches
+        if (data.branches) {
+          this.branches = {}
+          for (const [ci, cb] of Object.entries(data.branches)) {
+            this.branches[ci] = cb
+          }
+          // Restore direction/script tabs
+          for (const ci of this.selectedConceptIndices) {
+            const cb = this.branches[ci]
+            if (cb && cb.selectedDirectionIndices && cb.selectedDirectionIndices.length) {
+              this.activeDirectionTab = cb.selectedDirectionIndices[0]
+            }
+          }
+        }
+        // Jump to furthest step
+        this.activeStep = this.furthestStep
+      } catch (e) {
+        this.error = e.message
+      } finally {
+        this.loading = false
+      }
+    },
+
+    // ── Structured feedback ──
+    toggleDim(dim) {
+      const idx = this.selectedDims.indexOf(dim)
+      if (idx >= 0) this.selectedDims.splice(idx, 1)
+      else this.selectedDims.push(dim)
+    },
+    clearFeedback() {
+      this.selectedDims = []
+      this.feedbackDetail = ''
+      this.showFeedback = false
+    },
+
+    // ── Merge ──
+    openMergeModal(level) {
+      this.mergeLevel = level
+      if (level === 'concept') this.mergeIndices = [...this.tempMultiSelect]
+      else if (level === 'direction') this.mergeIndices = [...(this.tempDirSelects[this.activeConceptTab] || [])]
+      else if (level === 'script') this.mergeIndices = [...(this.tempScriptSelects[this.activeConceptTab + '_' + this.activeDirectionTab] || [])]
+      this.mergeInstruction = ''
+      this.showMergeModal = true
+    },
+    async executeMerge() {
+      this.showMergeModal = false
+      this.loading = true
+      this.loadingMsg = '正在混合生成...'
+      try {
+        const body = {
+          level: this.mergeLevel,
+          indices: this.mergeIndices,
+          instruction: this.mergeInstruction,
+        }
+        if (this.mergeLevel === 'direction') body.concept_index = this.activeConceptTab
+        if (this.mergeLevel === 'script') {
+          body.concept_index = this.activeConceptTab
+          body.direction_index = this.activeDirectionTab
+        }
+        const data = await this.api('POST', `/api/campaigns/${this.campaignId}/merge`, body)
+        // Update state with merged results
+        if (this.mergeLevel === 'concept') {
+          this.concepts = data.concepts
+          this.selectedConceptIndices = []
+          this.branches = {}
+          this.tempMultiSelect = []
+        } else if (this.mergeLevel === 'direction') {
+          const ci = this.activeConceptTab
+          if (!this.branches[ci]) this.branches[ci] = {}
+          this.branches[ci].directions = data.directions
+          this.branches[ci].selectedDirectionIndices = null
+          this.branches[ci].directionBranches = {}
+          this.tempDirSelects[ci] = []
+        } else if (this.mergeLevel === 'script') {
+          const ci = this.activeConceptTab, di = this.activeDirectionTab
+          const key = ci + '_' + di
+          if (!this.branches[ci]) this.branches[ci] = {}
+          if (!this.branches[ci].directionBranches) this.branches[ci].directionBranches = {}
+          if (!this.branches[ci].directionBranches[di]) this.branches[ci].directionBranches[di] = {}
+          this.branches[ci].directionBranches[di].scripts = data.scripts
+          this.branches[ci].directionBranches[di].selectedScriptIndices = null
+          this.branches[ci].directionBranches[di].scriptBranches = {}
+          this.tempScriptSelects[key] = []
+        }
+      } catch (e) {
+        this.error = e.message
+      } finally {
+        this.loading = false
+        this.loadingMsg = ''
+      }
+    },
+
+    // ── Tree panel ──
+    async loadTree() {
+      try {
+        this.treeData = await this.api('GET', `/api/campaigns/${this.campaignId}/tree`)
+        this.showTreePanel = true
+      } catch (e) {
+        this.error = e.message
+      }
+    },
+    getTreeNodeTitle(node) {
+      const d = node.data || {}
+      if (node.node_type === 'root') return (d.brand_name || '') + ' / ' + (d.platform || '')
+      if (node.node_type === 'images') return (d.images || []).length + '张图片'
+      return d.title || d.outline || d.id || node.node_id
+    },
+    treeNodeClass(node) {
+      const base = 'px-3 py-1.5 rounded-lg border text-xs cursor-pointer inline-flex items-center gap-1.5 mb-1 transition '
+      if (node.status === 'selected') return base + 'border-emerald-400 bg-emerald-50 text-emerald-700'
+      if (node.status === 'rejected') return base + 'border-slate-300 bg-slate-50 text-slate-400 line-through'
+      return base + 'border-blue-300 bg-blue-50 text-blue-700'
+    },
+
     // ── API helpers ──
     async api(method, url, body = null) {
       const ts = new Date().toLocaleTimeString()
@@ -1548,6 +1808,12 @@ createApp({
       if (this.brands.length === 1) this.form.brand_id = this.brands[0].id
     } catch (e) {
       console.error('Failed to load brands:', e)
+    }
+    try {
+      const data = await this.api('GET', '/api/campaigns')
+      this.existingCampaigns = data.campaigns || []
+    } catch (e) {
+      console.error('Failed to load campaigns:', e)
     }
   },
 }).mount('#app')
