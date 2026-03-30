@@ -7,7 +7,8 @@ from models.base import GenerationMeta
 from models.brand import BrandKB
 from models.campaign import CampaignGoal, Concept, Direction, DirectionResult
 from modules.brand_kb import extract_script_kb
-from modules.llm_util import call_llm, parse_json_array
+from modules.examples import ExamplesLoader
+from modules.llm_util import call_llm, parse_json_array, validate_items
 from modules.tracker import CampaignTracker
 
 PROMPT_TEMPLATE = "direction_gen_v1.txt"
@@ -32,6 +33,7 @@ class DirectionGenerator:
             template = f.read()
 
         direction_kb = extract_script_kb(brand_kb.raw_md)
+        examples = ExamplesLoader().load(goal.brand_id, "direction")
         user_content = template.format(
             brand_kb=direction_kb,
             concept_title=concept.title,
@@ -42,12 +44,14 @@ class DirectionGenerator:
             platform_kb=platform_kb or "无",
             feedback=feedback or "无",
             sibling_info=sibling_info or "无（当前是唯一分支）",
+            examples=examples,
         )
 
         input_hash = hashlib.md5(user_content.encode("utf-8")).hexdigest()
 
-        raw_text = call_llm(user_content, max_tokens=8192)
+        raw_text = call_llm(user_content, max_tokens=8192, temperature=0.8, cache_system=True)
         directions_data = parse_json_array(raw_text)
+        directions_data = validate_items(directions_data, ["title", "description", "platform_notes"], "direction")
 
         directions = [
             Direction(

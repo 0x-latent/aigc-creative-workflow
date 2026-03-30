@@ -6,7 +6,8 @@ from config import LLM_MODEL, logger
 from models.base import GenerationMeta
 from models.brand import BrandKB, InsightsBundle
 from models.campaign import CampaignGoal, Concept, ConceptResult
-from modules.llm_util import call_llm, parse_json_array
+from modules.examples import ExamplesLoader
+from modules.llm_util import call_llm, parse_json_array, validate_items
 from modules.tracker import CampaignTracker
 
 PROMPT_TEMPLATE = "concept_gen_v1.txt"
@@ -28,6 +29,7 @@ class ConceptGenerator:
         with open(template_path, "r", encoding="utf-8") as f:
             template = f.read()
 
+        examples = ExamplesLoader().load(goal.brand_id, "concept")
         user_content = template.format(
             brand_kb=brand_kb.raw_md,
             insights=insights.raw_text,
@@ -35,12 +37,14 @@ class ConceptGenerator:
             platform=goal.platform,
             notes=goal.notes,
             feedback=feedback or "无",
+            examples=examples,
         )
 
         input_hash = hashlib.md5(user_content.encode("utf-8")).hexdigest()
 
-        raw_text = call_llm(user_content, max_tokens=8192)
+        raw_text = call_llm(user_content, max_tokens=8192, temperature=0.9, cache_system=True)
         concepts_data = parse_json_array(raw_text)
+        concepts_data = validate_items(concepts_data, ["title", "description", "rationale"], "concept")
 
         concepts = [
             Concept(

@@ -12,6 +12,10 @@ load_dotenv()
 LLM_MODEL = os.getenv("AIGC_LLM_MODEL", "claude-sonnet-4-20250514")
 IMAGE_MODEL = os.getenv("AIGC_IMAGE_MODEL", "gemini-3-pro-image-preview")
 
+# --- LLM Sampling ---
+_temp_env = os.getenv("AIGC_LLM_TEMPERATURE", "")
+LLM_TEMPERATURE: float | None = float(_temp_env) if _temp_env else None  # None = API default
+
 # --- API Retry ---
 MAX_RETRIES = 3
 RETRY_BASE_DELAY = 2  # seconds

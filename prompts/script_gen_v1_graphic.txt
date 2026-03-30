@@ -17,7 +17,7 @@
 
 ## 上一轮反馈（如有）
 {feedback}
-
+{examples}
 ## 同批次其他分支（必须差异化，不要与它们雷同）
 {sibling_info}
 

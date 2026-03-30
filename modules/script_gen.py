@@ -15,7 +15,8 @@ from models.campaign import (
     ScriptResult,
 )
 from modules.brand_kb import extract_script_kb
-from modules.llm_util import call_llm, parse_json_array
+from modules.examples import ExamplesLoader
+from modules.llm_util import call_llm, parse_json_array, validate_items, validate_scenes
 from modules.tracker import CampaignTracker
 
 PROMPT_TEMPLATE_VIDEO = "script_gen_v1.txt"
@@ -45,6 +46,7 @@ class ScriptGenerator:
         feedback: str,
         platform_kb: str,
         sibling_info: str,
+        examples: str = "",
     ) -> list[dict]:
         """Generate multiple variants via parallel single-variant calls.
 
@@ -76,6 +78,7 @@ class ScriptGenerator:
                 feedback=feedback,
                 platform_kb=platform_kb,
                 sibling_info=variant_hints[variant_idx],
+                examples=examples,
             )
             return data[0] if data else None
 
@@ -108,6 +111,7 @@ class ScriptGenerator:
         feedback: str,
         platform_kb: str,
         sibling_info: str,
+        examples: str = "",
     ) -> list[dict]:
         """Single LLM call, returns parsed JSON array."""
         user_content = template.format(
@@ -121,8 +125,9 @@ class ScriptGenerator:
             num_variants=num_variants,
             feedback=feedback or "无",
             sibling_info=sibling_info or "无（当前是唯一分支）",
+            examples=examples,
         )
-        raw_text = call_llm(user_content, max_tokens=16384)
+        raw_text = call_llm(user_content, max_tokens=16384, temperature=0.5, cache_system=True)
         return parse_json_array(raw_text), user_content
 
     def generate(
@@ -141,13 +146,14 @@ class ScriptGenerator:
             template = f.read()
 
         script_kb = extract_script_kb(brand_kb.raw_md)
+        examples = ExamplesLoader().load(goal.brand_id, "script")
 
         # For graphic platforms (5-9 scenes per variant), split into parallel
         # single-variant calls to avoid output truncation.
         if prompt_template == PROMPT_TEMPLATE_GRAPHIC and num_variants > 1:
             scripts_data = self._generate_parallel(
                 template, script_kb, goal, direction,
-                num_variants, feedback, platform_kb, sibling_info,
+                num_variants, feedback, platform_kb, sibling_info, examples,
             )
             # Use first variant's prompt for input_hash
             user_content = template.format(
@@ -161,11 +167,12 @@ class ScriptGenerator:
                 num_variants=num_variants,
                 feedback=feedback or "无",
                 sibling_info=sibling_info or "无（当前是唯一分支）",
+                examples=examples,
             )
         else:
             scripts_data, user_content = self._call_once(
                 template, script_kb, goal, direction,
-                num_variants, feedback, platform_kb, sibling_info,
+                num_variants, feedback, platform_kb, sibling_info, examples,
             )
             if len(scripts_data) < num_variants:
                 logger.warning(f"请求 {num_variants} 套脚本，实际解析到 {len(scripts_data)} 套（可能因输出截断）")
@@ -174,16 +181,20 @@ class ScriptGenerator:
 
         scripts = []
         for i, s in enumerate(scripts_data):
+            validated_scenes = validate_scenes(s.get("scenes", []))
+            if not validated_scenes:
+                logger.warning(f"脚本 {i+1} 所有场景校验失败，跳过")
+                continue
             scenes = [
                 Scene(
                     scene_no=sc["scene_no"],
-                    duration_sec=sc["duration_sec"],
+                    duration_sec=sc.get("duration_sec", 0),
                     visual_description=sc["visual_description"],
                     voiceover=sc["voiceover"],
                     image_prompt=sc["image_prompt"],
                     page_type=sc.get("page_type", ""),
                 )
-                for sc in s["scenes"]
+                for sc in validated_scenes
             ]
             scripts.append(
                 Script(

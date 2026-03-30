@@ -16,20 +16,49 @@ SYSTEM_PROMPT = (
 )
 
 
-def call_llm(user_content: str, *, max_tokens: int = 4096) -> str:
-    """Call Claude API with retry logic, prefilled assistant response for reliable JSON."""
+def call_llm(
+    user_content: str,
+    *,
+    max_tokens: int = 4096,
+    temperature: float | None = None,
+    cache_system: bool = False,
+) -> str:
+    """Call Claude API with retry logic, prefilled assistant response for reliable JSON.
+
+    Args:
+        temperature: Sampling temperature. Higher = more creative, lower = more precise.
+                     None uses the API default.
+        cache_system: If True, mark system prompt for Anthropic prompt caching.
+    """
+    from config import LLM_TEMPERATURE
+
+    # Resolve temperature: explicit arg > env config > API default
+    effective_temp = temperature if temperature is not None else LLM_TEMPERATURE
+
     client = anthropic.Anthropic()
+
+    # System prompt: optionally wrap for caching
+    system_block: str | list = SYSTEM_PROMPT
+    if cache_system:
+        system_block = [
+            {"type": "text", "text": SYSTEM_PROMPT, "cache_control": {"type": "ephemeral"}}
+        ]
+
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            response = client.messages.create(
+            kwargs: dict = dict(
                 model=LLM_MODEL,
                 max_tokens=max_tokens,
-                system=SYSTEM_PROMPT,
+                system=system_block,
                 messages=[
                     {"role": "user", "content": user_content},
                     {"role": "assistant", "content": "["},
                 ],
             )
+            if effective_temp is not None:
+                kwargs["temperature"] = effective_temp
+
+            response = client.messages.create(**kwargs)
             if response.stop_reason == "max_tokens":
                 logger.warning(f"LLM 输出被截断（已用满 {max_tokens} tokens），将尝试修复")
             raw = response.content[0].text
@@ -167,3 +196,41 @@ def _repair_truncated_json(fragment: str) -> list[dict] | None:
             pass
 
     return None
+
+
+# ── Output validation helpers ──────────────────────────────────
+
+
+def validate_items(
+    items: list[dict], required_fields: list[str], item_label: str = "item"
+) -> list[dict]:
+    """Filter out items missing required fields. Raises if ALL items fail."""
+    valid = []
+    for i, item in enumerate(items):
+        missing = [f for f in required_fields if not item.get(f)]
+        if missing:
+            logger.warning(f"{item_label}[{i}] 缺少必填字段 {missing}，已跳过")
+            continue
+        valid.append(item)
+    if not valid:
+        raise ValueError(f"所有 {item_label} 均校验失败，缺少必填字段")
+    return valid
+
+
+def validate_scenes(scenes: list[dict]) -> list[dict]:
+    """Validate script scenes: required fields + image_prompt length warning."""
+    required = ("scene_no", "visual_description", "voiceover", "image_prompt")
+    valid = []
+    for s in scenes:
+        missing = [f for f in required if not s.get(f)]
+        if missing:
+            logger.warning(f"场景{s.get('scene_no', '?')} 缺少字段 {missing}，已跳过")
+            continue
+        prompt = s.get("image_prompt", "")
+        word_count = len(prompt.split())
+        if word_count < 20:
+            logger.warning(
+                f"场景{s['scene_no']} image_prompt 仅 {word_count} 词（建议 80-150 词）"
+            )
+        valid.append(s)
+    return valid

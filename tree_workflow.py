@@ -49,6 +49,20 @@ from modules.tracker import CampaignTracker
 from modules.tree_manager import TreeManager
 
 
+# ── Helpers ─────────────────────────────────────────────────────
+
+def _build_merge_feedback(items_data: list[dict], decision) -> str:
+    """Build feedback string for merge: selected items' summaries + user instruction."""
+    parts = []
+    for idx in (decision.selected_indices or []):
+        item = items_data[idx]
+        title = item.get("title") or item.get("outline") or item.get("id", "")
+        desc = item.get("description", "")
+        parts.append(f"方案{idx+1}「{title}」: {desc}")
+    refs = "\n".join(parts)
+    return f"请融合以下方案的优点，生成新方案：\n{refs}\n用户指令：{decision.feedback}"
+
+
 # ── Step runners ───────────────────────────────────────────────
 
 def step_concepts(tree_mgr: TreeManager, goal, brand_kb, insights, parent_id):
@@ -88,10 +102,14 @@ def step_concepts(tree_mgr: TreeManager, goal, brand_kb, insights, parent_id):
             logger.info(f"  选定理念: {selected.title}")
             return selected_nid, selected
 
+        # rejected or merge → regenerate with feedback
         tree_mgr.reject_batch(node_ids, decision.feedback)
         tree_mgr.tree.save()
-        feedback = decision.feedback
-        logger.info(f"  根据反馈重新生成: {feedback}")
+        if decision.status == "merge":
+            feedback = _build_merge_feedback(items_data, decision)
+        else:
+            feedback = decision.feedback
+        logger.info(f"  根据反馈重新生成...")
 
 
 def step_directions(tree_mgr: TreeManager, goal, brand_kb, concept: Concept, platform_kb, parent_id):
@@ -134,8 +152,11 @@ def step_directions(tree_mgr: TreeManager, goal, brand_kb, concept: Concept, pla
 
         tree_mgr.reject_batch(node_ids, decision.feedback)
         tree_mgr.tree.save()
-        feedback = decision.feedback
-        logger.info(f"  根据反馈重新生成: {feedback}")
+        if decision.status == "merge":
+            feedback = _build_merge_feedback(items_data, decision)
+        else:
+            feedback = decision.feedback
+        logger.info(f"  根据反馈重新生成...")
 
 
 def step_scripts(tree_mgr: TreeManager, goal, brand_kb, direction: Direction, platform_kb, parent_id):
@@ -207,8 +228,11 @@ def step_scripts(tree_mgr: TreeManager, goal, brand_kb, direction: Direction, pl
 
         tree_mgr.reject_batch(node_ids, decision.feedback)
         tree_mgr.tree.save()
-        feedback = decision.feedback
-        logger.info(f"  根据反馈重新生成: {feedback}")
+        if decision.status == "merge":
+            feedback = _build_merge_feedback(items_data, decision)
+        else:
+            feedback = decision.feedback
+        logger.info(f"  根据反馈重新生成...")
 
 
 def step_style_confirm(script: Script) -> str:

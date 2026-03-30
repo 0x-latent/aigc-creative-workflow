@@ -19,6 +19,17 @@ from modules.tracker import CampaignTracker
 from models.campaign import CampaignGoal
 
 
+def _merge_feedback(items: list[dict], decision) -> str:
+    """Build feedback for merge: selected items + user instruction."""
+    parts = []
+    for idx in (decision.selected_indices or []):
+        item = items[idx]
+        title = item.get("title") or item.get("outline") or item.get("id", "")
+        desc = item.get("description", "")
+        parts.append(f"方案{idx+1}「{title}」: {desc}")
+    return f"请融合以下方案的优点，生成新方案：\n" + "\n".join(parts) + f"\n用户指令：{decision.feedback}"
+
+
 def run_workflow(brand_id: str, objective: str, platform: str, notes: str = ""):
     # Init
     check_api_keys()
@@ -79,8 +90,8 @@ def run_workflow(brand_id: str, objective: str, platform: str, notes: str = ""):
             selected_concept = concept_result.concepts[decision.selected_index]
             logger.info(f"  选定理念: {selected_concept.title}")
             break
-        feedback = decision.feedback
-        logger.info(f"  根据反馈重新生成: {feedback}")
+        feedback = _merge_feedback(items, decision) if decision.status == "merge" else decision.feedback
+        logger.info(f"  根据反馈重新生成...")
 
     # Step 3: Generate directions → ReviewGate
     logger.info("生成创意方向...")
@@ -110,8 +121,8 @@ def run_workflow(brand_id: str, objective: str, platform: str, notes: str = ""):
             selected_direction = direction_result.directions[decision.selected_index]
             logger.info(f"  选定方向: {selected_direction.title}")
             break
-        feedback = decision.feedback
-        logger.info(f"  根据反馈重新生成: {feedback}")
+        feedback = _merge_feedback(items, decision) if decision.status == "merge" else decision.feedback
+        logger.info(f"  根据反馈重新生成...")
 
     # Step 4: Generate scripts (3 variants) → ReviewGate
     logger.info("生成脚本...")
@@ -148,8 +159,8 @@ def run_workflow(brand_id: str, objective: str, platform: str, notes: str = ""):
             selected_script = script_result.scripts[decision.selected_index]
             logger.info(f"  选定脚本: {selected_script.id}")
             break
-        feedback = decision.feedback
-        logger.info(f"  根据反馈重新生成: {feedback}")
+        feedback = _merge_feedback(items, decision) if decision.status == "merge" else decision.feedback
+        logger.info(f"  根据反馈重新生成...")
 
     # Step 4.5: Visual style confirmation
     recommended_style = selected_script.visual_style or "写实摄影风"
