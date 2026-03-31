@@ -35,40 +35,50 @@
     .modal-backdrop { background: rgba(0,0,0,.4); backdrop-filter: blur(2px); }
 
     /* ── Mind-map tree ── */
-    .mindmap { position: relative; padding: 40px 32px; min-width: max-content; }
-    .mindmap-level { display: flex; flex-direction: column; gap: 6px; position: relative; }
+    .mindmap { position: relative; padding: 48px 40px; min-width: max-content; }
+    .mindmap-level { display: flex; flex-direction: column; gap: 10px; position: relative; }
     .mindmap-branch { display: flex; align-items: flex-start; gap: 0; }
     .mindmap-node {
-      position: relative; padding: 8px 14px; border-radius: 10px; border: 1.5px solid #2d3348;
-      background: #1c1f2e; cursor: pointer; transition: all .2s; white-space: nowrap;
-      display: flex; align-items: center; gap: 8px; min-width: 120px; max-width: 260px;
-      z-index: 2;
+      position: relative; padding: 10px 16px; border-radius: 10px; border: 1.5px solid #d1d5db;
+      background: #fff; cursor: pointer; transition: all .25s ease;
+      white-space: nowrap; display: flex; align-items: center; gap: 10px;
+      min-width: 140px; max-width: 280px; z-index: 2;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
     }
-    .mindmap-node:hover { border-color: #6366f1; transform: scale(1.03); box-shadow: 0 4px 20px rgba(99,102,241,.15); }
-    .mindmap-node.st-selected { border-color: #22c55e; background: #0d2818; }
-    .mindmap-node.st-selected .mn-dot { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
-    .mindmap-node.st-generated { border-color: #3b82f6; background: #0f1a2e; }
-    .mindmap-node.st-generated .mn-dot { background: #3b82f6; }
-    .mindmap-node.st-rejected { border-color: #444; background: #1a1a1a; opacity: .45; }
-    .mindmap-node.st-rejected .mn-dot { background: #666; }
-    .mindmap-node.on-path { box-shadow: 0 0 0 2px rgba(250,204,21,.25), 0 0 12px rgba(250,204,21,.1); }
-    .mn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; background: #3b82f6; transition: all .2s; }
-    .mn-icon { font-size: 13px; flex-shrink: 0; opacity: .7; }
+    .mindmap-node:hover { border-color: #818cf8; transform: scale(1.03); box-shadow: 0 4px 16px rgba(99,102,241,.15); }
+    .mindmap-node.st-selected { border-color: #22c55e; background: #f0fdf4; }
+    .mindmap-node.st-selected .mn-dot { background: #22c55e; box-shadow: 0 0 6px #22c55e66; }
+    .mindmap-node.st-generated { border-color: #3b82f6; background: #eff6ff; }
+    .mindmap-node.st-generated .mn-dot { background: #3b82f6; box-shadow: 0 0 4px #3b82f644; }
+    .mindmap-node.st-rejected { border-color: #d1d5db; background: #f9fafb; opacity: .4; }
+    .mindmap-node.st-rejected .mn-dot { background: #9ca3af; }
+    .mindmap-node.on-path { box-shadow: 0 0 0 2px rgba(99,102,241,.25), 0 0 12px rgba(99,102,241,.08); }
+    .mn-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: #3b82f6; transition: all .25s; }
+    .mn-icon { font-size: 14px; flex-shrink: 0; opacity: .7; }
     .mn-body { overflow: hidden; }
-    .mn-type { font-size: 9px; text-transform: uppercase; letter-spacing: .5px; color: #888; line-height: 1; }
-    .mn-title { font-size: 12px; color: #e0e0e0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
-    .mindmap-children { display: flex; flex-direction: column; gap: 6px; margin-left: 0; padding-left: 0; position: relative; }
+    .mn-type { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: #6b7280; line-height: 1; font-weight: 500; }
+    .mn-title { font-size: 13px; color: #1f2937; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.4; font-weight: 500; }
+    .mindmap-children { display: flex; flex-direction: column; gap: 10px; margin-left: 0; padding-left: 0; position: relative; }
     /* SVG connector container */
-    .mindmap-connector { position: relative; width: 48px; flex-shrink: 0; min-height: 32px; }
+    .mindmap-connector { position: relative; width: 56px; flex-shrink: 0; min-height: 32px; }
     .mindmap-connector svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow: visible; }
-    .mindmap-connector path { fill: none; stroke: #2d3348; stroke-width: 1.5; }
-    .mindmap-connector path.path-active { stroke: #facc15; stroke-width: 2; }
+    .mindmap-connector path { fill: none; stroke: #cbd5e1; stroke-width: 1.5; transition: stroke .3s, stroke-width .3s; }
+    .mindmap-connector path.path-active { stroke: #6366f1; stroke-width: 2; }
     /* Detail panel in tree */
-    .tree-detail { background: #151825; border: 1px solid #2d3348; border-radius: 12px; padding: 20px; }
-    .tree-detail h4 { color: #fff; font-size: 15px; font-weight: 600; margin-bottom: 12px; }
-    .tree-detail .td-label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #666; margin-bottom: 4px; margin-top: 12px; }
-    .tree-detail .td-value { font-size: 13px; color: #bbb; line-height: 1.6; }
-    .tree-detail .td-scene { background: #0f1117; border-radius: 8px; padding: 10px; margin-top: 6px; border-left: 3px solid #2d3348; }
+    .tree-detail { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px; }
+    .tree-detail h4 { color: #111827; font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+    .tree-detail .td-label { font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: #9ca3af; margin-bottom: 4px; margin-top: 12px; }
+    .tree-detail .td-value { font-size: 13px; color: #4b5563; line-height: 1.6; }
+    .tree-detail .td-scene { background: #f9fafb; border-radius: 8px; padding: 10px; margin-top: 6px; border-left: 3px solid #e5e7eb; }
+    /* Guidance input */
+    .guidance-box { background: linear-gradient(135deg, #f8fafc 0%, #f0f4ff 100%); border: 1px dashed #c7d2fe; border-radius: 12px; padding: 16px 20px; transition: border-color .2s; }
+    .guidance-box:focus-within { border-color: #818cf8; border-style: solid; }
+    .guidance-box textarea { background: #fff; }
+    .guidance-label { font-size: 13px; font-weight: 500; color: #4f46e5; }
+    .guidance-hint { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    /* Optimize button on cards */
+    .card-optimize-btn { opacity: 0; transition: opacity .2s; }
+    .card-hover:hover .card-optimize-btn { opacity: 1; }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -111,17 +121,26 @@
         </div>
         <!-- Resume existing campaigns -->
         <div v-if="existingCampaigns.length > 0" class="mt-6 border-t border-slate-200 pt-5">
-          <h3 class="text-sm font-medium text-slate-500 mb-3">继续已有项目</h3>
-          <div class="space-y-2 max-h-56 overflow-y-auto">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-medium text-slate-500">历史项目 ({{ existingCampaigns.length }})</h3>
+            <button v-if="existingCampaigns.length > 3" @click="showAllCampaigns = !showAllCampaigns"
+              class="text-xs text-indigo-600 hover:text-indigo-700">{{ showAllCampaigns ? '收起' : '查看全部' }}</button>
+          </div>
+          <div class="space-y-2" :class="showAllCampaigns ? 'max-h-[480px] overflow-y-auto' : 'max-h-56 overflow-y-auto'">
             <div v-for="c in existingCampaigns" :key="c.campaign_id"
-              class="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200 hover:border-indigo-300 transition cursor-pointer"
+              class="flex items-center justify-between p-3.5 bg-slate-50 rounded-xl border border-slate-200 hover:border-indigo-300 hover:shadow-sm transition cursor-pointer group"
               @click="loadCampaign(c.campaign_id)">
-              <div class="min-w-0">
-                <span class="text-sm font-medium text-slate-800">{{ c.brand_name }}</span>
-                <span class="text-xs text-slate-400 ml-2">{{ c.platform }}</span>
-                <p class="text-xs text-slate-500 mt-0.5 truncate">{{ c.objective }}</p>
+              <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-slate-800">{{ c.brand_name }}</span>
+                  <span class="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">{{ c.platform }}</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                    :class="c.step_label === '已完成' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'">{{ c.step_label }}</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1 truncate">{{ c.objective }}</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">{{ formatTime(c.updated_at) }}</p>
               </div>
-              <span class="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full shrink-0 ml-3">{{ c.step_label }}</span>
+              <span class="text-indigo-500 text-xs opacity-0 group-hover:opacity-100 transition shrink-0 ml-3">加载 &rarr;</span>
             </div>
           </div>
         </div>
@@ -238,8 +257,26 @@
                 </div>
               </div>
             </div>
-            <button @click="doGenerate('concepts')" class="mt-4 px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-              生成核心创意理念
+            <!-- Pre-generation guidance -->
+            <div class="mt-4 guidance-box">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="guidance-label">创意引导</span>
+                <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">可选</span>
+              </div>
+              <p class="guidance-hint mb-3">输入你的创意想法或方向偏好，AI 会参考生成。留空则由 AI 自由发挥。</p>
+              <textarea v-model="preGuidance" rows="3" placeholder="例如：希望围绕「家庭温馨」主题，偏向感性诉求，视觉上偏暖色调..."
+                class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"></textarea>
+              <div class="flex items-center gap-3 mt-3">
+                <span class="text-xs text-slate-500">生成数量：</span>
+                <div class="flex gap-1">
+                  <button v-for="n in genCountOptions" :key="'cc'+n" @click="genCountConcept = n"
+                    class="w-7 h-7 text-xs rounded-lg border transition flex items-center justify-center"
+                    :class="genCountConcept === n ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-400'">{{ n }}</button>
+                </div>
+              </div>
+            </div>
+            <button @click="doGenerate('concepts', preGuidance, genCountConcept)" class="mt-4 px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+              生成 {{ genCountConcept }} 个核心创意理念
             </button>
           </template>
 
@@ -250,24 +287,45 @@
               <p class="text-slate-500 text-sm mt-1">{{ selectedConceptIndices.length > 0 ? `已选 ${selectedConceptIndices.length} 个理念` : '选择一个或多个理念（可多选），作为创意方案的核心出发点' }}</p>
             </div>
             <div class="grid grid-cols-1 gap-4">
-              <div v-for="(c, i) in concepts" :key="c.id"
-                @click="toggleConceptSelect(i)"
-                class="bg-white rounded-xl border-2 p-5 card-hover relative"
-                :class="multiCardClass(i, selectedConceptIndices, tempMultiSelect)">
-                <!-- Checkbox -->
-                <div class="absolute top-4 left-4">
-                  <div class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
-                    :class="isInSelection(i, selectedConceptIndices, tempMultiSelect) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'">
-                    <span v-if="isInSelection(i, selectedConceptIndices, tempMultiSelect)">&#10003;</span>
+              <div v-for="(c, i) in concepts" :key="c.id">
+                <div @click="toggleConceptSelect(i)"
+                  class="bg-white rounded-xl border-2 p-5 card-hover relative"
+                  :class="multiCardClass(i, selectedConceptIndices, tempMultiSelect)">
+                  <!-- Checkbox -->
+                  <div class="absolute top-4 left-4">
+                    <div class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
+                      :class="isInSelection(i, selectedConceptIndices, tempMultiSelect) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'">
+                      <span v-if="isInSelection(i, selectedConceptIndices, tempMultiSelect)">&#10003;</span>
+                    </div>
+                  </div>
+                  <div class="pl-8">
+                    <div class="flex items-start justify-between">
+                      <h3 class="font-semibold text-base">{{ c.title }}</h3>
+                      <div class="flex items-center gap-2 shrink-0 ml-2">
+                        <button v-if="selectedConceptIndices.length === 0" @click.stop="optimizeIdx = (optimizeIdx === i ? null : i); optimizeText = ''"
+                          class="card-optimize-btn text-xs text-indigo-500 hover:text-indigo-700 px-2 py-0.5 rounded hover:bg-indigo-50 transition">
+                          优化此项
+                        </button>
+                        <span class="text-xs text-slate-400">{{ c.id }}</span>
+                      </div>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">{{ c.description }}</p>
+                    <p class="text-xs text-slate-400 mt-3 leading-relaxed"><span class="font-medium text-slate-500">推导依据：</span>{{ c.rationale }}</p>
                   </div>
                 </div>
-                <div class="pl-8">
-                  <div class="flex items-start justify-between">
-                    <h3 class="font-semibold text-base">{{ c.title }}</h3>
-                    <span class="text-xs text-slate-400 shrink-0 ml-2">{{ c.id }}</span>
+                <!-- Per-item optimize input -->
+                <div v-if="optimizeIdx === i && selectedConceptIndices.length === 0" class="mt-2 bg-indigo-50 rounded-xl p-4 border border-indigo-200 fade-in">
+                  <p class="text-xs text-indigo-600 font-medium mb-2">针对「{{ c.title }}」提出优化建议：</p>
+                  <textarea v-model="optimizeText" rows="2" :placeholder="'例如：调性太严肃，希望更轻松幽默一些'" class="w-full text-sm border border-indigo-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none bg-white"></textarea>
+                  <div class="flex gap-2 mt-2">
+                    <button @click="doGenerate('concepts', '请重点优化方案「' + c.title + '」：' + optimizeText + '。其他方案可保留或微调。'); optimizeIdx = null; optimizeText = ''"
+                      :disabled="!optimizeText"
+                      class="px-4 py-1.5 text-sm font-medium rounded-lg transition"
+                      :class="optimizeText ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'">
+                      优化重新生成
+                    </button>
+                    <button @click="optimizeIdx = null" class="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 transition">取消</button>
                   </div>
-                  <p class="text-sm text-slate-600 mt-2">{{ c.description }}</p>
-                  <p class="text-xs text-slate-400 mt-3 leading-relaxed"><span class="font-medium text-slate-500">推导依据：</span>{{ c.rationale }}</p>
                 </div>
               </div>
             </div>
@@ -281,24 +339,20 @@
               <button v-if="tempMultiSelect.length >= 2" @click="openMergeModal('concept')" class="px-4 py-2.5 rounded-lg text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition">
                 混合 {{ tempMultiSelect.length }} 个方案
               </button>
-              <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">
-                重新生成...
-              </button>
             </div>
-            <div v-else class="mt-6">
-              <button @click="regenStep(1)" class="text-sm text-slate-500 hover:text-indigo-600 transition">
-                重新生成理念...
-              </button>
-            </div>
-            <div v-if="showFeedback && selectedConceptIndices.length === 0" class="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+            <div v-else class="mt-6"></div>
+            <!-- Feedback / Regen area (always visible) -->
+            <div class="mt-5 bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <p class="text-xs text-slate-500 mb-3">{{ selectedConceptIndices.length > 0 ? '想调整？输入意见重新生成理念：' : '不满意？输入修改意见重新生成全部理念：' }}</p>
               <div class="flex flex-wrap gap-1.5 mb-3">
                 <button v-for="dim in feedbackDims" :key="dim" @click="toggleDim(dim)"
                   class="px-2.5 py-1 text-xs rounded-full border transition"
                   :class="selectedDims.includes(dim) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-300'">{{ dim }}</button>
               </div>
-              <textarea v-model="feedbackDetail" rows="2" placeholder="具体修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
-              <button @click="doGenerate('concepts', structuredFeedback); clearFeedback()" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">
-                重新生成
+              <textarea v-model="feedbackDetail" rows="2" placeholder="具体修改方向（可留空，直接点击重新生成也行）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+              <button @click="if(selectedConceptIndices.length > 0) { selectedConceptIndices = []; branches = {}; } doGenerate('concepts', structuredFeedback, genCountConcept); clearFeedback()"
+                class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">
+                重新生成全部
               </button>
             </div>
           </template>
@@ -308,6 +362,23 @@
             <div class="mb-6">
               <h2 class="text-xl font-bold">创意执行方向</h2>
               <p class="text-slate-500 text-sm mt-1">为每个理念选择执行方向（可多选）</p>
+              <!-- Always-visible guidance input -->
+              <div class="mt-3 guidance-box">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="guidance-label">方向引导</span>
+                  <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">可选</span>
+                </div>
+                <p class="guidance-hint mb-2">对当前理念的方向展开有什么想法？可在重新生成时参考。</p>
+                <textarea v-model="dirGuidance[activeConceptTab]" rows="2" placeholder="例如：偏向情感共鸣方向，避免过于理性的表达..." class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"></textarea>
+                <div class="flex items-center gap-3 mt-3">
+                  <span class="text-xs text-slate-500">生成数量：</span>
+                  <div class="flex gap-1">
+                    <button v-for="n in genCountOptions" :key="'dc'+n" @click="genCountDirection = n"
+                      class="w-7 h-7 text-xs rounded-lg border transition flex items-center justify-center"
+                      :class="genCountDirection === n ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-400'">{{ n }}</button>
+                  </div>
+                </div>
+              </div>
             </div>
             <!-- Concept tabs -->
             <div class="flex border-b border-slate-200 mb-6 overflow-x-auto">
@@ -321,20 +392,41 @@
             </div>
             <!-- Direction cards for active tab -->
             <div v-if="currentBranch && currentBranch.directions" class="space-y-4">
-              <div v-for="(d, i) in currentBranch.directions" :key="d.id"
-                @click="toggleDirectionSelect(i)"
-                class="bg-white rounded-xl border-2 p-5 card-hover relative"
-                :class="multiCardClass(i, currentBranch.selectedDirectionIndices || [], tempDirSelect)">
-                <div class="absolute top-4 left-4">
-                  <div class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
-                    :class="isInSelection(i, currentBranch.selectedDirectionIndices || [], tempDirSelect) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'">
-                    <span v-if="isInSelection(i, currentBranch.selectedDirectionIndices || [], tempDirSelect)">&#10003;</span>
+              <div v-for="(d, i) in currentBranch.directions" :key="d.id">
+                <div @click="toggleDirectionSelect(i)"
+                  class="bg-white rounded-xl border-2 p-5 card-hover relative"
+                  :class="multiCardClass(i, currentBranch.selectedDirectionIndices || [], tempDirSelect)">
+                  <div class="absolute top-4 left-4">
+                    <div class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
+                      :class="isInSelection(i, currentBranch.selectedDirectionIndices || [], tempDirSelect) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'">
+                      <span v-if="isInSelection(i, currentBranch.selectedDirectionIndices || [], tempDirSelect)">&#10003;</span>
+                    </div>
+                  </div>
+                  <div class="pl-8">
+                    <div class="flex items-start justify-between">
+                      <h3 class="font-semibold text-base">{{ d.title }}</h3>
+                      <button v-if="!(currentBranch.selectedDirectionIndices || []).length" @click.stop="optimizeIdx = (optimizeIdx === i ? null : i); optimizeText = ''"
+                        class="card-optimize-btn text-xs text-indigo-500 hover:text-indigo-700 px-2 py-0.5 rounded hover:bg-indigo-50 transition shrink-0 ml-2">
+                        优化此项
+                      </button>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">{{ d.description }}</p>
+                    <p class="text-xs text-slate-400 mt-3"><span class="font-medium text-slate-500">平台适配：</span>{{ d.platform_notes }}</p>
                   </div>
                 </div>
-                <div class="pl-8">
-                  <h3 class="font-semibold text-base">{{ d.title }}</h3>
-                  <p class="text-sm text-slate-600 mt-2">{{ d.description }}</p>
-                  <p class="text-xs text-slate-400 mt-3"><span class="font-medium text-slate-500">平台适配：</span>{{ d.platform_notes }}</p>
+                <!-- Per-item optimize input -->
+                <div v-if="optimizeIdx === i && !(currentBranch.selectedDirectionIndices || []).length" class="mt-2 bg-indigo-50 rounded-xl p-4 border border-indigo-200 fade-in">
+                  <p class="text-xs text-indigo-600 font-medium mb-2">针对「{{ d.title }}」提出优化建议：</p>
+                  <textarea v-model="optimizeText" rows="2" placeholder="例如：视觉表现可以更大胆一些..." class="w-full text-sm border border-indigo-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none bg-white"></textarea>
+                  <div class="flex gap-2 mt-2">
+                    <button @click="genDirections(activeConceptTab, '请重点优化方案「' + d.title + '」：' + optimizeText + '。其他方案可保留或微调。'); optimizeIdx = null; optimizeText = ''"
+                      :disabled="!optimizeText"
+                      class="px-4 py-1.5 text-sm font-medium rounded-lg transition"
+                      :class="optimizeText ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'">
+                      优化重新生成
+                    </button>
+                    <button @click="optimizeIdx = null" class="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 transition">取消</button>
+                  </div>
                 </div>
               </div>
               <!-- Per-tab status -->
@@ -345,23 +437,36 @@
                 <span v-else class="text-sm text-slate-400">
                   未选择（将跳过该理念）
                 </span>
-                <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成...</button>
                 <button v-if="tempDirSelect.length >= 2" @click="openMergeModal('direction')" class="text-sm text-amber-600 hover:text-amber-700 font-medium transition">混合方案</button>
               </div>
-              <div v-if="showFeedback" class="mt-3 bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <!-- Feedback / Regen area -->
+              <div class="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <p class="text-xs text-slate-500 mb-3">输入修改意见重新生成该理念下的所有方向：</p>
                 <div class="flex flex-wrap gap-1.5 mb-3">
                   <button v-for="dim in feedbackDims" :key="dim" @click="toggleDim(dim)"
                     class="px-2.5 py-1 text-xs rounded-full border transition"
                     :class="selectedDims.includes(dim) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-300'">{{ dim }}</button>
                 </div>
-                <textarea v-model="feedbackDetail" rows="2" placeholder="具体修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
-                <button @click="genDirections(activeConceptTab, structuredFeedback); clearFeedback()" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成</button>
+                <textarea v-model="feedbackDetail" rows="2" placeholder="具体修改方向（可留空，直接点击重新生成也行）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                <button @click="genDirections(activeConceptTab, (dirGuidance[activeConceptTab] || '') + ' ' + structuredFeedback, genCountDirection); clearFeedback()" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成全部方向</button>
               </div>
             </div>
-            <div v-else-if="!loading" class="text-center py-12">
-              <button @click="genDirections(activeConceptTab)" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-                为"{{ truncate(concepts[activeConceptTab].title, 15) }}"生成方向
-              </button>
+            <div v-else-if="!loading" class="py-8">
+              <div class="max-w-lg mx-auto">
+                <div class="guidance-box mb-4">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="guidance-label">方向引导</span>
+                    <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">可选</span>
+                  </div>
+                  <p class="guidance-hint mb-3">对「{{ truncate(concepts[activeConceptTab]?.title, 15) }}」的方向展开有什么想法？不输入则 AI 自行发散。</p>
+                  <textarea v-model="dirGuidance[activeConceptTab]" rows="2" placeholder="例如：偏向情感共鸣方向，避免过于理性的表达..." class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"></textarea>
+                </div>
+                <div class="text-center">
+                  <button @click="genDirections(activeConceptTab, dirGuidance[activeConceptTab] || '', genCountDirection)" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                    为"{{ truncate(concepts[activeConceptTab].title, 15) }}"生成方向
+                  </button>
+                </div>
+              </div>
             </div>
             <!-- Unified selection summary + confirm button -->
             <div v-if="allDirectionsGenerated" class="mt-8 bg-white rounded-xl border-2 border-indigo-100 p-5">
@@ -392,6 +497,23 @@
             <div class="mb-6">
               <h2 class="text-xl font-bold">{{ scriptStepName }}</h2>
               <p class="text-slate-500 text-sm mt-1">{{ isGraphicPlatform ? '为每条路径选择图文方案' : '为每条路径选择脚本方案' }}</p>
+              <!-- Always-visible guidance input -->
+              <div class="mt-3 guidance-box">
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="guidance-label">{{ isGraphicPlatform ? '方案' : '脚本' }}引导</span>
+                  <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">可选</span>
+                </div>
+                <p class="guidance-hint mb-2">对{{ isGraphicPlatform ? '图文方案' : '脚本' }}有什么需求？可在重新生成时参考。</p>
+                <textarea v-model="scriptGuidance[activeConceptTab + '_' + activeDirectionTab]" rows="2" :placeholder="isGraphicPlatform ? '例如：封面要有冲击力，正文图文比例均衡...' : '例如：节奏要紧凑，30秒内完成叙事...'" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"></textarea>
+                <div class="flex items-center gap-3 mt-3">
+                  <span class="text-xs text-slate-500">生成数量：</span>
+                  <div class="flex gap-1">
+                    <button v-for="n in genCountOptions" :key="'sc'+n" @click="genCountScript = n"
+                      class="w-7 h-7 text-xs rounded-lg border transition flex items-center justify-center"
+                      :class="genCountScript === n ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-400'">{{ n }}</button>
+                  </div>
+                </div>
+              </div>
               <!-- Breadcrumb -->
               <div class="flex items-center gap-1 text-xs text-slate-400 mt-2">
                 <span class="text-indigo-600 font-medium">{{ truncate(concepts[activeConceptTab]?.title, 12) }}</span>
@@ -422,31 +544,52 @@
             </div>
             <!-- Script cards -->
             <div v-if="currentDirBranch && currentDirBranch.scripts" class="space-y-4">
-              <div v-for="(sc, i) in currentDirBranch.scripts" :key="sc.id"
-                @click="toggleScriptSelect(i)"
-                class="bg-white rounded-xl border-2 p-5 card-hover relative"
-                :class="multiCardClass(i, currentDirBranch.selectedScriptIndices || [], tempScriptSelect)">
-                <div class="absolute top-4 left-4">
-                  <div class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
-                    :class="isInSelection(i, currentDirBranch.selectedScriptIndices || [], tempScriptSelect) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'">
-                    <span v-if="isInSelection(i, currentDirBranch.selectedScriptIndices || [], tempScriptSelect)">&#10003;</span>
+              <div v-for="(sc, i) in currentDirBranch.scripts" :key="sc.id">
+                <div @click="toggleScriptSelect(i)"
+                  class="bg-white rounded-xl border-2 p-5 card-hover relative"
+                  :class="multiCardClass(i, currentDirBranch.selectedScriptIndices || [], tempScriptSelect)">
+                  <div class="absolute top-4 left-4">
+                    <div class="w-5 h-5 rounded border-2 flex items-center justify-center text-xs"
+                      :class="isInSelection(i, currentDirBranch.selectedScriptIndices || [], tempScriptSelect) ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-slate-300'">
+                      <span v-if="isInSelection(i, currentDirBranch.selectedScriptIndices || [], tempScriptSelect)">&#10003;</span>
+                    </div>
+                  </div>
+                  <div class="pl-8">
+                    <div class="flex items-start justify-between mb-2">
+                      <h3 class="font-semibold text-base">{{ isGraphicPlatform ? '图文方案' : '脚本方案' }} {{ i + 1 }}</h3>
+                      <div class="flex items-center gap-2 shrink-0 ml-2">
+                        <button v-if="!(currentDirBranch.selectedScriptIndices || []).length" @click.stop="optimizeIdx = (optimizeIdx === i ? null : i); optimizeText = ''"
+                          class="card-optimize-btn text-xs text-indigo-500 hover:text-indigo-700 px-2 py-0.5 rounded hover:bg-indigo-50 transition">
+                          优化此项
+                        </button>
+                        <span class="text-xs text-slate-400">{{ sc.scenes.length }} {{ isGraphicPlatform ? '页' : '个场景' }}<template v-if="!isGraphicPlatform"> · {{ sc.scenes.reduce((a, s) => a + s.duration_sec, 0) }}s</template></span>
+                      </div>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-1">{{ sc.outline }}</p>
+                    <p v-if="sc.visual_style" class="text-xs text-indigo-500 mb-2">推荐风格: {{ sc.visual_style }}</p>
+                    <div class="space-y-1.5">
+                      <div v-for="sn in sc.scenes" :key="sn.scene_no" class="flex text-xs text-slate-500 gap-2">
+                        <span class="shrink-0 text-slate-400" :class="isGraphicPlatform ? 'w-20' : 'w-16'">
+                          <template v-if="isGraphicPlatform">P{{ sn.scene_no }} <span class="text-indigo-400">{{ sn.page_type === 'cover' ? '封面' : sn.page_type === 'summary' ? '总结' : '正文' }}</span></template>
+                          <template v-else>场景{{ sn.scene_no }} ({{ sn.duration_sec }}s)</template>
+                        </span>
+                        <span class="truncate">{{ sn.visual_description }}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div class="pl-8">
-                  <div class="flex items-start justify-between mb-2">
-                    <h3 class="font-semibold text-base">{{ isGraphicPlatform ? '图文方案' : '脚本方案' }} {{ i + 1 }}</h3>
-                    <span class="text-xs text-slate-400">{{ sc.scenes.length }} {{ isGraphicPlatform ? '页' : '个场景' }}<template v-if="!isGraphicPlatform"> · {{ sc.scenes.reduce((a, s) => a + s.duration_sec, 0) }}s</template></span>
-                  </div>
-                  <p class="text-sm text-slate-600 mb-1">{{ sc.outline }}</p>
-                  <p v-if="sc.visual_style" class="text-xs text-indigo-500 mb-2">推荐风格: {{ sc.visual_style }}</p>
-                  <div class="space-y-1.5">
-                    <div v-for="sn in sc.scenes" :key="sn.scene_no" class="flex text-xs text-slate-500 gap-2">
-                      <span class="shrink-0 text-slate-400" :class="isGraphicPlatform ? 'w-20' : 'w-16'">
-                        <template v-if="isGraphicPlatform">P{{ sn.scene_no }} <span class="text-indigo-400">{{ sn.page_type === 'cover' ? '封面' : sn.page_type === 'summary' ? '总结' : '正文' }}</span></template>
-                        <template v-else>场景{{ sn.scene_no }} ({{ sn.duration_sec }}s)</template>
-                      </span>
-                      <span class="truncate">{{ sn.visual_description }}</span>
-                    </div>
+                <!-- Per-item optimize input -->
+                <div v-if="optimizeIdx === i && !(currentDirBranch.selectedScriptIndices || []).length" class="mt-2 bg-indigo-50 rounded-xl p-4 border border-indigo-200 fade-in">
+                  <p class="text-xs text-indigo-600 font-medium mb-2">针对{{ isGraphicPlatform ? '方案' : '脚本' }} {{ i + 1 }} 提出优化建议：</p>
+                  <textarea v-model="optimizeText" rows="2" :placeholder="isGraphicPlatform ? '例如：封面图需要更突出产品...' : '例如：第二个场景节奏可以更紧凑...'" class="w-full text-sm border border-indigo-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none bg-white"></textarea>
+                  <div class="flex gap-2 mt-2">
+                    <button @click="genScripts(activeConceptTab, activeDirectionTab, '请重点优化方案 ' + (i+1) + '（' + sc.outline + '）：' + optimizeText + '。其他方案可保留或微调。'); optimizeIdx = null; optimizeText = ''"
+                      :disabled="!optimizeText"
+                      class="px-4 py-1.5 text-sm font-medium rounded-lg transition"
+                      :class="optimizeText ? 'bg-indigo-600 text-white hover:bg-indigo-700' : 'bg-slate-200 text-slate-400 cursor-not-allowed'">
+                      优化重新生成
+                    </button>
+                    <button @click="optimizeIdx = null" class="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 transition">取消</button>
                   </div>
                 </div>
               </div>
@@ -458,23 +601,36 @@
                 <span v-else class="text-sm text-slate-400">
                   未选择（将跳过该方向）
                 </span>
-                <button @click="showFeedback = !showFeedback" class="text-sm text-slate-500 hover:text-indigo-600 transition">重新生成...</button>
                 <button v-if="tempScriptSelect.length >= 2" @click="openMergeModal('script')" class="text-sm text-amber-600 hover:text-amber-700 font-medium transition">混合方案</button>
               </div>
-              <div v-if="showFeedback" class="mt-3 bg-slate-50 rounded-xl p-4 border border-slate-200">
+              <!-- Feedback / Regen area -->
+              <div class="mt-4 bg-slate-50 rounded-xl p-4 border border-slate-200">
+                <p class="text-xs text-slate-500 mb-3">输入修改意见重新生成该路径下的所有{{ isGraphicPlatform ? '方案' : '脚本' }}：</p>
                 <div class="flex flex-wrap gap-1.5 mb-3">
                   <button v-for="dim in feedbackDims" :key="dim" @click="toggleDim(dim)"
                     class="px-2.5 py-1 text-xs rounded-full border transition"
                     :class="selectedDims.includes(dim) ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-300'">{{ dim }}</button>
                 </div>
-                <textarea v-model="feedbackDetail" rows="2" placeholder="具体修改方向（可留空）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
-                <button @click="genScripts(activeConceptTab, activeDirectionTab, structuredFeedback); clearFeedback()" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成</button>
+                <textarea v-model="feedbackDetail" rows="2" placeholder="具体修改方向（可留空，直接点击重新生成也行）" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                <button @click="genScripts(activeConceptTab, activeDirectionTab, (scriptGuidance[activeConceptTab + '_' + activeDirectionTab] || '') + ' ' + structuredFeedback, genCountScript); clearFeedback()" class="mt-2 px-4 py-2 bg-slate-700 text-white rounded-lg text-sm hover:bg-slate-800 transition">重新生成全部{{ isGraphicPlatform ? '方案' : '脚本' }}</button>
               </div>
             </div>
-            <div v-else-if="!loading" class="text-center py-12">
-              <button @click="genScripts(activeConceptTab, activeDirectionTab)" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-                生成{{ isGraphicPlatform ? '图文方案' : '脚本' }}
-              </button>
+            <div v-else-if="!loading" class="py-8">
+              <div class="max-w-lg mx-auto">
+                <div class="guidance-box mb-4">
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="guidance-label">{{ isGraphicPlatform ? '方案' : '脚本' }}引导</span>
+                    <span class="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">可选</span>
+                  </div>
+                  <p class="guidance-hint mb-3">对{{ isGraphicPlatform ? '图文方案' : '脚本' }}有什么特定需求？不输入则 AI 自行创作。</p>
+                  <textarea v-model="scriptGuidance[activeConceptTab + '_' + activeDirectionTab]" rows="2" :placeholder="isGraphicPlatform ? '例如：封面要有冲击力，正文图文比例均衡...' : '例如：节奏要紧凑，30秒内完成叙事...'" class="w-full text-sm border border-slate-200 rounded-lg px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"></textarea>
+                </div>
+                <div class="text-center">
+                  <button @click="genScripts(activeConceptTab, activeDirectionTab, scriptGuidance[activeConceptTab + '_' + activeDirectionTab] || '', genCountScript)" class="px-6 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                    生成{{ isGraphicPlatform ? '图文方案' : '脚本' }}
+                  </button>
+                </div>
+              </div>
             </div>
             <!-- Unified selection summary + confirm button -->
             <div v-if="allScriptsGenerated" class="mt-8 bg-white rounded-xl border-2 border-indigo-100 p-5">
@@ -508,6 +664,19 @@
           <template v-if="activeStep === 4">
             <div class="mb-6">
               <h2 class="text-xl font-bold">AI 配图预览</h2>
+              <!-- Image count selector -->
+              <div class="mt-3 flex items-center gap-3">
+                <span class="text-xs text-slate-500">每套方案生成图片数：</span>
+                <div class="flex gap-1">
+                  <button @click="genCountImage = 0"
+                    class="px-3 h-7 text-xs rounded-lg border transition"
+                    :class="genCountImage === 0 ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-400'">默认</button>
+                  <button v-for="n in [3,4,5,6,7,8,9]" :key="'ic'+n" @click="genCountImage = n"
+                    class="w-7 h-7 text-xs rounded-lg border transition flex items-center justify-center"
+                    :class="genCountImage === n ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-300 text-slate-600 hover:border-indigo-400'">{{ n }}</button>
+                </div>
+                <span class="text-[11px] text-slate-400">{{ genCountImage === 0 ? '按 AI 方案页数生成' : '生成 ' + genCountImage + ' 张图' }}</span>
+              </div>
               <div class="flex items-center gap-1 text-xs text-slate-400 mt-2">
                 <span class="text-indigo-600 font-medium">{{ truncate(concepts[activeConceptTab]?.title, 12) }}</span>
                 <span>&gt;</span>
@@ -792,17 +961,17 @@
   </div>
 
   <!-- ==================== TREE PANEL (Mind-map) ==================== -->
-  <div v-if="showTreePanel && treeData" class="fixed inset-0 z-50 bg-[#0f1117] flex flex-col">
+  <div v-if="showTreePanel && treeData" class="fixed inset-0 z-50 bg-[#faf9f6] flex flex-col">
     <!-- Top bar -->
-    <div class="h-12 bg-[#1a1d27] border-b border-[#2d3348] flex items-center px-5 shrink-0">
-      <h3 class="text-white font-bold text-sm">创意树</h3>
-      <span class="ml-3 text-xs text-slate-500">{{ treeData.campaign_id }}</span>
-      <div class="ml-6 flex items-center gap-4 text-[11px] text-slate-400">
-        <span><span class="inline-block w-2 h-2 rounded-full bg-emerald-400 mr-1 align-middle"></span>已选</span>
-        <span><span class="inline-block w-2 h-2 rounded-full bg-blue-400 mr-1 align-middle"></span>已生成</span>
-        <span><span class="inline-block w-2 h-2 rounded-full bg-slate-500 mr-1 align-middle"></span>未选</span>
+    <div class="h-12 bg-white border-b border-slate-200 flex items-center px-5 shrink-0 shadow-sm">
+      <h3 class="text-slate-800 font-bold text-sm">创意树</h3>
+      <span class="ml-3 text-xs text-slate-400">{{ treeData.campaign_id }}</span>
+      <div class="ml-6 flex items-center gap-4 text-[11px] text-slate-500">
+        <span><span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1 align-middle"></span>已选</span>
+        <span><span class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1 align-middle"></span>已生成</span>
+        <span><span class="inline-block w-2 h-2 rounded-full bg-slate-300 mr-1 align-middle"></span>未选</span>
       </div>
-      <button @click="showTreePanel = false" class="ml-auto text-slate-400 hover:text-white text-lg px-2">&times;</button>
+      <button @click="showTreePanel = false" class="ml-auto text-slate-400 hover:text-slate-700 text-lg px-2">&times;</button>
     </div>
     <!-- Content: tree + detail -->
     <div class="flex flex-1 overflow-hidden">
@@ -818,7 +987,7 @@
                 <div class="mn-title">{{ getTreeNodeTitle(treeData.nodes[treeData.root_id]) }}</div>
               </div>
             </div>
-            <div class="mindmap-connector" v-if="treeData.nodes[treeData.root_id]?.children?.length" :style="{minHeight: treeChildrenHeight(treeData.root_id) + 'px'}">
+            <div class="mindmap-connector" v-if="treeData.nodes[treeData.root_id]?.children?.length">
               <svg><path v-for="(_, i) in treeData.nodes[treeData.root_id].children" :key="i" :d="connectorPath(treeData.root_id, i)" :class="{
                 'path-active': isOnActivePath(treeData.nodes[treeData.root_id].children[i])
               }"/></svg>
@@ -833,7 +1002,7 @@
                     <div class="mn-title">{{ getTreeNodeTitle(treeData.nodes[cId]) }}</div>
                   </div>
                 </div>
-                <div class="mindmap-connector" v-if="treeData.nodes[cId]?.children?.length" :style="{minHeight: treeChildrenHeight(cId) + 'px'}">
+                <div class="mindmap-connector" v-if="treeData.nodes[cId]?.children?.length">
                   <svg><path v-for="(_, i) in treeData.nodes[cId].children" :key="i" :d="connectorPath(cId, i)" :class="{
                     'path-active': isOnActivePath(treeData.nodes[cId].children[i])
                   }"/></svg>
@@ -848,7 +1017,7 @@
                         <div class="mn-title">{{ getTreeNodeTitle(treeData.nodes[dId]) }}</div>
                       </div>
                     </div>
-                    <div class="mindmap-connector" v-if="treeData.nodes[dId]?.children?.length" :style="{minHeight: treeChildrenHeight(dId) + 'px'}">
+                    <div class="mindmap-connector" v-if="treeData.nodes[dId]?.children?.length">
                       <svg><path v-for="(_, i) in treeData.nodes[dId].children" :key="i" :d="connectorPath(dId, i)" :class="{
                         'path-active': isOnActivePath(treeData.nodes[dId].children[i])
                       }"/></svg>
@@ -863,7 +1032,7 @@
                             <div class="mn-title">{{ getTreeNodeTitle(treeData.nodes[sId]) }}</div>
                           </div>
                         </div>
-                        <div class="mindmap-connector" v-if="treeData.nodes[sId]?.children?.length" :style="{minHeight: treeChildrenHeight(sId) + 'px'}">
+                        <div class="mindmap-connector" v-if="treeData.nodes[sId]?.children?.length">
                           <svg><path v-for="(_, i) in treeData.nodes[sId].children" :key="i" :d="connectorPath(sId, i)" :class="{
                             'path-active': isOnActivePath(treeData.nodes[sId].children[i])
                           }"/></svg>
@@ -890,11 +1059,11 @@
         </div>
       </div>
       <!-- Detail panel (right side) -->
-      <div v-if="treeSelectedNode" class="w-[360px] shrink-0 bg-[#1a1d27] border-l border-[#2d3348] overflow-y-auto p-5">
+      <div v-if="treeSelectedNode" class="w-[360px] shrink-0 bg-white border-l border-slate-200 overflow-y-auto p-5">
         <div class="tree-detail">
           <div class="flex items-center gap-2 mb-1">
             <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
-              :class="treeSelectedNode.status === 'selected' ? 'bg-emerald-900/50 text-emerald-400' : treeSelectedNode.status === 'generated' ? 'bg-blue-900/50 text-blue-400' : 'bg-slate-700 text-slate-400'">
+              :class="treeSelectedNode.status === 'selected' ? 'bg-emerald-100 text-emerald-700' : treeSelectedNode.status === 'generated' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'">
               {{ treeSelectedNode.status }}
             </span>
             <span class="text-[10px] text-slate-500 font-mono">{{ treeSelectedNode.node_id }}</span>
@@ -1003,6 +1172,22 @@ createApp({
       showFeedback: false,
       feedback: '',
 
+      // Pre-generation guidance (optional user input before generating)
+      preGuidance: '',           // guidance before concept generation
+      dirGuidance: {},           // per-concept guidance before direction generation, keyed by ci
+      scriptGuidance: {},        // per-direction guidance before script generation, keyed by "ci_di"
+
+      // Generation count settings
+      genCountConcept: 5,
+      genCountDirection: 5,
+      genCountScript: 3,
+      genCountImage: 0,     // 0 = default (use AI's scene count)
+      genCountOptions: [3, 4, 5, 6, 7, 8],
+
+      // Per-item optimize
+      optimizeIdx: null,         // index of item being optimized
+      optimizeText: '',          // user's optimize input
+
       loading: false,
       loadingMsg: '',
       error: null,
@@ -1028,6 +1213,7 @@ createApp({
 
       // Resume
       existingCampaigns: [],
+      showAllCampaigns: false,
 
       // Structured feedback
       feedbackDims: ['调性/风格', '视觉表现', '受众匹配', '平台适配', '品牌一致性', '其他'],
@@ -1238,6 +1424,8 @@ createApp({
       this.selectedDims = []
       this.feedbackDetail = ''
       this.showFeedback = false
+      this.optimizeIdx = null
+      this.optimizeText = ''
     },
 
     // ── Merge ──
@@ -1303,6 +1491,8 @@ createApp({
       try {
         this.treeData = await this.api('GET', `/api/campaigns/${this.campaignId}/tree`)
         this.showTreePanel = true
+        // Fix connector lines after DOM renders the tree
+        this.$nextTick(() => { setTimeout(() => this.fixTreeConnectors(), 60) })
       } catch (e) {
         this.error = e.message
       }
@@ -1330,21 +1520,50 @@ createApp({
     treeChildrenHeight(parentId) {
       const node = this.treeData?.nodes?.[parentId]
       if (!node || !node.children || node.children.length === 0) return 32
-      // Each child row ~38px (node height + gap)
-      return Math.max(32, node.children.length * 38)
+      return Math.max(32, node.children.length * 50)
     },
     connectorPath(parentId, childIndex) {
-      // Generate a smooth bezier curve from left-center to the child node
-      const node = this.treeData?.nodes?.[parentId]
-      if (!node) return ''
-      const total = node.children.length
-      const rowH = 38  // matches CSS gap + node height
-      const totalH = total * rowH
-      const startY = totalH / 2  // middle of all children
-      const endY = childIndex * rowH + rowH / 2  // center of this child
-      const w = 48  // connector width
-      const cpx = w * 0.55  // bezier control point x offset
-      return `M 0,${startY} C ${cpx},${startY} ${w - cpx},${endY} ${w},${endY}`
+      // Initial placeholder (overwritten by fixTreeConnectors after DOM render)
+      return ''
+    },
+    fixTreeConnectors() {
+      // Measure actual DOM positions and recalculate SVG connector paths
+      const mindmap = document.getElementById('mindmap-scroll')
+      if (!mindmap) return
+      const allConnectors = mindmap.querySelectorAll('.mindmap-connector')
+      allConnectors.forEach(connEl => {
+        const childrenEl = connEl.nextElementSibling
+        if (!childrenEl || !childrenEl.classList.contains('mindmap-children')) return
+        const parentNodeEl = connEl.previousElementSibling
+        if (!parentNodeEl || !parentNodeEl.classList.contains('mindmap-node')) return
+
+        const childBranches = Array.from(childrenEl.children)
+        if (childBranches.length === 0) return
+
+        // Match connector height to children container actual height
+        const totalH = childrenEl.offsetHeight
+        connEl.style.height = totalH + 'px'
+        connEl.style.minHeight = totalH + 'px'
+
+        // Parent node vertical center (parent sits at top due to flex-start)
+        const startY = parentNodeEl.offsetHeight / 2
+
+        // Recalculate each SVG path
+        const svg = connEl.querySelector('svg')
+        if (!svg) return
+        const paths = svg.querySelectorAll('path')
+        const w = connEl.offsetWidth || 56
+        const cpx = w * 0.45
+
+        childBranches.forEach((branchEl, i) => {
+          if (i >= paths.length) return
+          // Find the direct .mindmap-node child (first child element)
+          const childNode = branchEl.querySelector(':scope > .mindmap-node')
+          const nodeH = childNode ? childNode.offsetHeight : 40
+          const endY = branchEl.offsetTop + nodeH / 2
+          paths[i].setAttribute('d', `M 0,${startY} C ${cpx},${startY} ${w - cpx},${endY} ${w},${endY}`)
+        })
+      })
     },
 
     // ── API helpers ──
@@ -1421,6 +1640,17 @@ createApp({
       return itemCount
     },
 
+    formatTime(ts) {
+      if (!ts) return ''
+      const d = new Date(ts * 1000)
+      const now = new Date()
+      const diff = (now - d) / 1000
+      if (diff < 60) return '刚刚'
+      if (diff < 3600) return Math.floor(diff / 60) + ' 分钟前'
+      if (diff < 86400) return Math.floor(diff / 3600) + ' 小时前'
+      if (diff < 604800) return Math.floor(diff / 86400) + ' 天前'
+      return d.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    },
     truncate(s, n) {
       if (!s) return ''
       return s.length > n ? s.slice(0, n) + '...' : s
@@ -1480,6 +1710,8 @@ createApp({
         this.showFeedback = false
         this.feedback = ''
         this.error = null
+        this.optimizeIdx = null
+        this.optimizeText = ''
         if (i === 5) this.loadSummary()
       }
     },
@@ -1551,7 +1783,7 @@ createApp({
     },
 
     // ── Concepts generation ──
-    async doGenerate(type, feedback = '') {
+    async doGenerate(type, feedback = '', count = null) {
       if (type === 'concepts') {
         this.loading = true
         this.loadingMsg = '正在生成核心创意理念...'
@@ -1560,7 +1792,9 @@ createApp({
         this.feedback = ''
         this.tempMultiSelect = []
         try {
-          const data = await this.api('POST', `/api/campaigns/${this.campaignId}/concepts`, { feedback })
+          const body = { feedback }
+          if (count) body.count = count
+          const data = await this.api('POST', `/api/campaigns/${this.campaignId}/concepts`, body)
           this.concepts = data.concepts
           this.selectedConceptIndices = []
           this.branches = {}
@@ -1606,7 +1840,7 @@ createApp({
     },
 
     // ── Direction generation ──
-    async genDirections(ci, feedback = '') {
+    async genDirections(ci, feedback = '', count = null) {
       this.loading = true
       this.loadingMsg = `正在为"${this.truncate(this.concepts[ci].title, 10)}"生成方向...`
       this.error = null
@@ -1615,7 +1849,9 @@ createApp({
       delete this.tempDirSelects[ci]
       this.tempDirSelects = { ...this.tempDirSelects }
       try {
-        const data = await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/directions`, { feedback })
+        const body = { feedback }
+        if (count) body.count = count
+        const data = await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/directions`, body)
         if (!this.branches[ci]) this.branches[ci] = {}
         this.branches[ci].directions = data.directions
         this.branches[ci].selectedDirectionIndices = null
@@ -1694,7 +1930,7 @@ createApp({
     },
 
     // ── Script generation ──
-    async genScripts(ci, di, feedback = '') {
+    async genScripts(ci, di, feedback = '', count = null) {
       this.loading = true
       this.loadingMsg = '正在生成脚本...'
       this.error = null
@@ -1704,7 +1940,9 @@ createApp({
       delete this.tempScriptSelects[key]
       this.tempScriptSelects = { ...this.tempScriptSelects }
       try {
-        const data = await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/scripts`, { feedback })
+        const body = { feedback }
+        if (count) body.count = count
+        const data = await this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/scripts`, body)
         if (!this.branches[ci].directionBranches) this.branches[ci].directionBranches = {}
         if (!this.branches[ci].directionBranches[di]) this.branches[ci].directionBranches[di] = {}
         this.branches[ci].directionBranches[di].scripts = data.scripts
@@ -1848,7 +2086,8 @@ createApp({
         this.branches = { ...this.branches } // trigger reactivity
 
         // Fire off image generation in background (don't await blocking the UI)
-        this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/${si}/images`)
+        const imgBody = this.genCountImage > 0 ? { count: this.genCountImage } : {}
+        this.api('POST', `/api/campaigns/${this.campaignId}/branches/${ci}/${di}/${si}/images`, imgBody)
           .then(data => {
             sb.images = data.images
             sb.generating = false
@@ -1896,8 +2135,9 @@ createApp({
         await Promise.all(stylePromises)
 
         // Generate all images via SSE — each branch streams in as it completes
+        const imgCountParam = this.genCountImage > 0 ? `?image_count=${this.genCountImage}` : ''
         await this.apiSSE(
-          `/api/campaigns/${this.campaignId}/images/generate_all`,
+          `/api/campaigns/${this.campaignId}/images/generate_all${imgCountParam}`,
           (item) => {
             const { concept_index: ci, direction_index: di, script_index: si, images } = item
             const sb = this.branches[ci]?.directionBranches?.[di]?.scriptBranches?.[si]
@@ -1972,6 +2212,12 @@ createApp({
       this.tempMultiSelect = []
       this.tempDirSelects = {}
       this.tempScriptSelects = {}
+      this.preGuidance = ''
+      this.dirGuidance = {}
+      this.scriptGuidance = {}
+      this.genCountImage = 0
+      this.optimizeIdx = null
+      this.optimizeText = ''
       this.loading = false
       this.error = null
       this.showFeedback = false

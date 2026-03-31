@@ -63,6 +63,7 @@ class CreateReq(BaseModel):
 
 class FeedbackReq(BaseModel):
     feedback: str = ""
+    count: int | None = None  # optional generation count override
 
 
 class SelectReq(BaseModel):
@@ -423,9 +424,12 @@ async def generate_concepts(cid: str, req: FeedbackReq = None):
     req = req or FeedbackReq()
     s = _get(cid)
     gen = ConceptGenerator()
+    feedback = req.feedback or ""
+    if req.count:
+        feedback = f"请生成恰好 {req.count} 个创意理念。" + feedback
     async with llm_semaphore:
         result = await asyncio.to_thread(
-            gen.generate, s["goal"], s["brand_kb"], s["insights"], req.feedback
+            gen.generate, s["goal"], s["brand_kb"], s["insights"], feedback
         )
     s["concepts"] = result.concepts
     s["selected_concept_indices"] = None
@@ -479,9 +483,12 @@ async def generate_directions(cid: str, ci: int, req: FeedbackReq = None):
     branch = _get_concept_branch(s, ci)
     concept = s["concepts"][ci]
     gen = DirectionGenerator()
+    feedback = req.feedback or ""
+    if req.count:
+        feedback = f"请生成恰好 {req.count} 个创意方向。" + feedback
     async with llm_semaphore:
         result = await asyncio.to_thread(
-            gen.generate, s["goal"], s["brand_kb"], concept, req.feedback,
+            gen.generate, s["goal"], s["brand_kb"], concept, feedback,
             platform_kb=s["platform_kb"],
         )
     branch["directions"] = result.directions
@@ -539,10 +546,11 @@ async def generate_scripts(cid: str, ci: int, di: int, req: FeedbackReq = None):
     dir_branch = _get_direction_branch(concept_branch, di)
     direction = concept_branch["directions"][di]
     gen = ScriptGenerator()
+    num_variants = req.count or 3
     async with llm_semaphore:
         result = await asyncio.to_thread(
-            gen.generate, s["goal"], s["brand_kb"], direction, feedback=req.feedback,
-            platform_kb=s["platform_kb"],
+            gen.generate, s["goal"], s["brand_kb"], direction, num_variants=num_variants,
+            feedback=req.feedback, platform_kb=s["platform_kb"],
         )
     dir_branch["scripts"] = result.scripts
     dir_branch["selected_script_indices"] = None
@@ -619,6 +627,9 @@ async def generate_images(cid: str, ci: int, di: int, si: int, req: FeedbackReq 
         visual_style=visual_style, reference_images=s.get("brand_images"),
         branch_prefix=branch_prefix,
     )
+    # Limit image count if user specified
+    if req.count and req.count < len(tasks):
+        tasks = tasks[:req.count]
     # Generate all images for this branch with concurrency control
     async def gen_one(t):
         async with image_semaphore:
@@ -791,7 +802,7 @@ async def generate_all_scripts(cid: str):
 
 
 @app.post("/api/campaigns/{cid}/images/generate_all")
-async def generate_all_images(cid: str):
+async def generate_all_images(cid: str, image_count: int | None = None):
     """Generate images for ALL script branches concurrently. Returns SSE stream.
 
     Flattens all individual image tasks into a single pool (max 40 concurrent),
@@ -822,6 +833,8 @@ async def generate_all_images(cid: str):
                     reference_images=s.get("brand_images"),
                     branch_prefix=f"c{ci}_d{di}_s{si}",
                 )
+                if image_count and image_count < len(tasks):
+                    tasks = tasks[:image_count]
                 branch_tasks.append((ci, di, si, script, sb, tasks))
                 total_images += len(tasks)
 

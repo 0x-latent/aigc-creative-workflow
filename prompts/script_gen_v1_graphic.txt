@@ -32,7 +32,7 @@
    - 水墨中国风（Chinese ink painting style）
    - 杂志排版风（Editorial/magazine layout style）
    - 清新文艺风（Fresh artistic style）
-3. **5-9 张配图页面**（scenes），每页包含：
+3. **配图页面**（scenes）：根据内容需要合理安排页面数量（通常 5-9 页，但不强制），每页包含：
    - 页码编号（scene_no）
    - 页面类型（page_type）：cover / body / summary
    - 画面描述（visual_description，中文）：这张图要展示什么内容

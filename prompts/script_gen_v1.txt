@@ -30,7 +30,7 @@
    - 扁平插画风（Flat illustration style）
    - 水墨中国风（Chinese ink painting style）
    - 电影感（Cinematic style）
-3. 3-5 个分镜场景，每个场景包含：
+3. 分镜场景：根据内容需要合理安排场景数量（通常 3-5 个，但不强制），每个场景包含：
    - 场景编号（scene_no）
    - 时长（duration_sec，秒）
    - 画面描述（visual_description，中文）
